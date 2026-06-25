@@ -59,7 +59,6 @@ export function Header() {
           </Link>
           <Link
             to="/auth"
-            search={{ mode: "register" }}
             className="px-5 py-2 text-sm font-semibold text-white bg-brand-blue rounded-lg hover:opacity-90 transition"
           >
             Register
