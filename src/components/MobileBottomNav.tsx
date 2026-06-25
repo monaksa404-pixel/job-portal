@@ -1,12 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, LayoutGrid, Briefcase, FileText, User } from "lucide-react";
+import { Home, LayoutGrid, Briefcase, FileText, Bell } from "lucide-react";
 
 const items = [
   { to: "/", label: "Home", icon: Home },
   { to: "/categories", label: "Categories", icon: LayoutGrid },
   { to: "/jobs", label: "Jobs", icon: Briefcase },
   { to: "/my-applications", label: "Applications", icon: FileText },
-  { to: "/profile", label: "Profile", icon: User },
+  { to: "/notifications", label: "Alerts", icon: Bell },
 ] as const;
 
 export function MobileBottomNav() {
