@@ -56,3 +56,59 @@ export type Application = {
   created_at: string;
   job?: Job;
 };
+
+export type Notification = {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: "job_alert" | "application_update" | "system";
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+};
+
+export type Popup = {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  is_viewed: boolean;
+  created_at: string;
+};
+
+export type Profile = {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+  email: string | null;
+  nationality: string | null;
+  country: string | null;
+  gender: "male" | "female" | null;
+  date_of_birth: string | null;
+  avatar_url: string | null;
+};
+
+export type NotificationPrefs = {
+  user_id: string;
+  job_alerts: boolean;
+  application_updates: boolean;
+  system_updates: boolean;
+};
+
+export type UserDocument = {
+  id: string;
+  user_id: string;
+  kind: string;
+  name: string;
+  url: string;
+  size_bytes: number;
+  created_at: string;
+};
+
+export function profileCompleteness(p: Profile | null): number {
+  if (!p) return 0;
+  const fields = [p.full_name, p.phone, p.email, p.nationality, p.country, p.gender, p.date_of_birth, p.avatar_url];
+  const filled = fields.filter(Boolean).length;
+  return Math.round((filled / fields.length) * 100);
+}

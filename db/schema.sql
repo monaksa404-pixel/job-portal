@@ -259,3 +259,123 @@ insert into public.categories (name, slug, icon, color, sort_order) values
   ('Cleaner',      'cleaner',      'sparkles',      'amber',   12),
   ('Other',        'other',        'grid',          'gray',    13)
 on conflict (name) do nothing;
+
+-- =====================================================================
+-- USER FLOW EXTENSION (idempotent; safe to re-run)
+-- =====================================================================
+
+-- SAVED JOBS ----------------------------------------------------------
+create table if not exists public.saved_jobs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  job_id  uuid not null references public.jobs(id)   on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (user_id, job_id)
+);
+grant select, insert, delete on public.saved_jobs to authenticated;
+grant all on public.saved_jobs to service_role;
+alter table public.saved_jobs enable row level security;
+create policy "Saved self select" on public.saved_jobs for select to authenticated using (auth.uid() = user_id);
+create policy "Saved self insert" on public.saved_jobs for insert to authenticated with check (auth.uid() = user_id);
+create policy "Saved self delete" on public.saved_jobs for delete to authenticated using (auth.uid() = user_id);
+
+-- USER DOCUMENTS ------------------------------------------------------
+create table if not exists public.user_documents (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  kind text not null default 'other',
+  name text not null,
+  url  text not null,
+  size_bytes bigint default 0,
+  created_at timestamptz not null default now()
+);
+grant select, insert, delete on public.user_documents to authenticated;
+grant all on public.user_documents to service_role;
+alter table public.user_documents enable row level security;
+create policy "Docs self select" on public.user_documents for select to authenticated using (auth.uid() = user_id);
+create policy "Docs self insert" on public.user_documents for insert to authenticated with check (auth.uid() = user_id);
+create policy "Docs self delete" on public.user_documents for delete to authenticated using (auth.uid() = user_id);
+
+-- NOTIFICATION PREFERENCES -------------------------------------------
+create table if not exists public.notification_preferences (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  job_alerts boolean not null default true,
+  application_updates boolean not null default true,
+  system_updates boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+grant select, insert, update on public.notification_preferences to authenticated;
+grant all on public.notification_preferences to service_role;
+alter table public.notification_preferences enable row level security;
+create policy "Prefs self all" on public.notification_preferences for all to authenticated
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- SUPPORT TICKETS -----------------------------------------------------
+create table if not exists public.support_tickets (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  subject text not null,
+  message text not null,
+  status  text not null default 'open',
+  created_at timestamptz not null default now()
+);
+grant select, insert on public.support_tickets to authenticated;
+grant all on public.support_tickets to service_role;
+alter table public.support_tickets enable row level security;
+create policy "Tickets self select" on public.support_tickets for select to authenticated using (auth.uid() = user_id);
+create policy "Tickets self insert" on public.support_tickets for insert to authenticated with check (auth.uid() = user_id);
+create policy "Tickets admin all"   on public.support_tickets for all    to authenticated
+  using (public.has_role(auth.uid(), 'admin')) with check (public.has_role(auth.uid(), 'admin'));
+
+-- NOTIFICATIONS columns used by UI -----------------------------------
+alter table public.notifications add column if not exists type text not null default 'system';
+alter table public.notifications add column if not exists link text;
+
+-- AVATARS bucket ------------------------------------------------------
+insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+do $$ begin
+  create policy "Avatars public read" on storage.objects for select to anon, authenticated using (bucket_id = 'avatars');
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "Avatars self write" on storage.objects for insert to authenticated
+    with check (bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "Avatars self update" on storage.objects for update to authenticated
+    using (bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]);
+exception when duplicate_object then null; end $$;
+
+-- DOCUMENTS bucket ----------------------------------------------------
+insert into storage.buckets (id, name, public) values ('documents', 'documents', false)
+on conflict (id) do nothing;
+do $$ begin
+  create policy "Docs self upload" on storage.objects for insert to authenticated
+    with check (bucket_id = 'documents' and auth.uid()::text = (storage.foldername(name))[1]);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "Docs self read" on storage.objects for select to authenticated
+    using (bucket_id = 'documents' and auth.uid()::text = (storage.foldername(name))[1]);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "Docs self delete" on storage.objects for delete to authenticated
+    using (bucket_id = 'documents' and auth.uid()::text = (storage.foldername(name))[1]);
+exception when duplicate_object then null; end $$;
+
+-- AVATAR url on profile ----------------------------------------------
+alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists date_of_birth date;
+
+-- REALTIME ------------------------------------------------------------
+do $$ begin
+  alter publication supabase_realtime add table public.notifications;
+exception when others then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.popups;
+exception when others then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.messages;
+exception when others then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.applications;
+exception when others then null; end $$;

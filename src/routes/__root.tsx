@@ -20,6 +20,7 @@ import "@fontsource/plus-jakarta-sans/700.css";
 import "@fontsource/plus-jakarta-sans/800.css";
 import { Header } from "../components/Header";
 import { MobileBottomNav } from "../components/MobileBottomNav";
+import { PopupListener } from "../components/PopupListener";
 
 function NotFoundComponent() {
   return (
@@ -132,6 +133,7 @@ function RootComponent() {
           <Outlet />
         </main>
         <MobileBottomNav />
+          <PopupListener />
       </div>
     </QueryClientProvider>
   );

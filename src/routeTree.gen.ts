@@ -9,8 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SavedJobsRouteImport } from './routes/saved-jobs'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as MyDocumentsRouteImport } from './routes/my-documents'
 import { Route as MyApplicationsRouteImport } from './routes/my-applications'
+import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,14 +25,44 @@ import { Route as JobsIdRouteImport } from './routes/jobs.$id'
 import { Route as JobsIdApplyRouteImport } from './routes/jobs.$id.apply'
 import { Route as ApplicationsSuccessApplicationIdRouteImport } from './routes/applications.success.$applicationId'
 
+const SavedJobsRoute = SavedJobsRouteImport.update({
+  id: '/saved-jobs',
+  path: '/saved-jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentsRoute = PaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MyDocumentsRoute = MyDocumentsRouteImport.update({
+  id: '/my-documents',
+  path: '/my-documents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MyApplicationsRoute = MyApplicationsRouteImport.update({
   id: '/my-applications',
   path: '/my-applications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MessagesRoute = MessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CategoriesRoute = CategoriesRouteImport.update({
@@ -70,8 +106,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/categories': typeof CategoriesRoute
+  '/dashboard': typeof DashboardRoute
+  '/messages': typeof MessagesRoute
   '/my-applications': typeof MyApplicationsRoute
+  '/my-documents': typeof MyDocumentsRoute
   '/notifications': typeof NotificationsRoute
+  '/payments': typeof PaymentsRoute
+  '/profile': typeof ProfileRoute
+  '/saved-jobs': typeof SavedJobsRoute
   '/jobs/$id': typeof JobsIdRouteWithChildren
   '/jobs/': typeof JobsIndexRoute
   '/applications/success/$applicationId': typeof ApplicationsSuccessApplicationIdRoute
@@ -81,8 +123,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/categories': typeof CategoriesRoute
+  '/dashboard': typeof DashboardRoute
+  '/messages': typeof MessagesRoute
   '/my-applications': typeof MyApplicationsRoute
+  '/my-documents': typeof MyDocumentsRoute
   '/notifications': typeof NotificationsRoute
+  '/payments': typeof PaymentsRoute
+  '/profile': typeof ProfileRoute
+  '/saved-jobs': typeof SavedJobsRoute
   '/jobs/$id': typeof JobsIdRouteWithChildren
   '/jobs': typeof JobsIndexRoute
   '/applications/success/$applicationId': typeof ApplicationsSuccessApplicationIdRoute
@@ -93,8 +141,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/categories': typeof CategoriesRoute
+  '/dashboard': typeof DashboardRoute
+  '/messages': typeof MessagesRoute
   '/my-applications': typeof MyApplicationsRoute
+  '/my-documents': typeof MyDocumentsRoute
   '/notifications': typeof NotificationsRoute
+  '/payments': typeof PaymentsRoute
+  '/profile': typeof ProfileRoute
+  '/saved-jobs': typeof SavedJobsRoute
   '/jobs/$id': typeof JobsIdRouteWithChildren
   '/jobs/': typeof JobsIndexRoute
   '/applications/success/$applicationId': typeof ApplicationsSuccessApplicationIdRoute
@@ -106,8 +160,14 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/categories'
+    | '/dashboard'
+    | '/messages'
     | '/my-applications'
+    | '/my-documents'
     | '/notifications'
+    | '/payments'
+    | '/profile'
+    | '/saved-jobs'
     | '/jobs/$id'
     | '/jobs/'
     | '/applications/success/$applicationId'
@@ -117,8 +177,14 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/categories'
+    | '/dashboard'
+    | '/messages'
     | '/my-applications'
+    | '/my-documents'
     | '/notifications'
+    | '/payments'
+    | '/profile'
+    | '/saved-jobs'
     | '/jobs/$id'
     | '/jobs'
     | '/applications/success/$applicationId'
@@ -128,8 +194,14 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/categories'
+    | '/dashboard'
+    | '/messages'
     | '/my-applications'
+    | '/my-documents'
     | '/notifications'
+    | '/payments'
+    | '/profile'
+    | '/saved-jobs'
     | '/jobs/$id'
     | '/jobs/'
     | '/applications/success/$applicationId'
@@ -140,8 +212,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   CategoriesRoute: typeof CategoriesRoute
+  DashboardRoute: typeof DashboardRoute
+  MessagesRoute: typeof MessagesRoute
   MyApplicationsRoute: typeof MyApplicationsRoute
+  MyDocumentsRoute: typeof MyDocumentsRoute
   NotificationsRoute: typeof NotificationsRoute
+  PaymentsRoute: typeof PaymentsRoute
+  ProfileRoute: typeof ProfileRoute
+  SavedJobsRoute: typeof SavedJobsRoute
   JobsIdRoute: typeof JobsIdRouteWithChildren
   JobsIndexRoute: typeof JobsIndexRoute
   ApplicationsSuccessApplicationIdRoute: typeof ApplicationsSuccessApplicationIdRoute
@@ -149,6 +227,27 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/saved-jobs': {
+      id: '/saved-jobs'
+      path: '/saved-jobs'
+      fullPath: '/saved-jobs'
+      preLoaderRoute: typeof SavedJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payments': {
+      id: '/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof PaymentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/notifications': {
       id: '/notifications'
       path: '/notifications'
@@ -156,11 +255,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/my-documents': {
+      id: '/my-documents'
+      path: '/my-documents'
+      fullPath: '/my-documents'
+      preLoaderRoute: typeof MyDocumentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/my-applications': {
       id: '/my-applications'
       path: '/my-applications'
       fullPath: '/my-applications'
       preLoaderRoute: typeof MyApplicationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/messages': {
+      id: '/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/categories': {
@@ -230,8 +350,14 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   CategoriesRoute: CategoriesRoute,
+  DashboardRoute: DashboardRoute,
+  MessagesRoute: MessagesRoute,
   MyApplicationsRoute: MyApplicationsRoute,
+  MyDocumentsRoute: MyDocumentsRoute,
   NotificationsRoute: NotificationsRoute,
+  PaymentsRoute: PaymentsRoute,
+  ProfileRoute: ProfileRoute,
+  SavedJobsRoute: SavedJobsRoute,
   JobsIdRoute: JobsIdRouteWithChildren,
   JobsIndexRoute: JobsIndexRoute,
   ApplicationsSuccessApplicationIdRoute: ApplicationsSuccessApplicationIdRoute,
@@ -239,13 +365,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

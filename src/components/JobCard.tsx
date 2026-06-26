@@ -1,7 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Bookmark } from "lucide-react";
+import { MapPin, Heart } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { Job } from "@/lib/types";
 import { formatRelative } from "@/lib/queries";
+import { useAuth } from "@/hooks/use-auth";
+import { isJobSaved, toggleSaveJob } from "@/lib/saved";
 
 function CompanyLogo({ job }: { job: Job }) {
   if (job.company_logo_url) {
@@ -27,6 +30,19 @@ function CompanyLogo({ job }: { job: Job }) {
 }
 
 export function JobCard({ job }: { job: Job }) {
+  const { user } = useAuth();
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    isJobSaved(user.id, job.id).then(setSaved);
+  }, [user, job.id]);
+
+  async function onToggle(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation();
+    if (!user) return;
+    setSaved(await toggleSaveJob(user.id, job.id));
+  }
+
   return (
     <Link
       to="/jobs/$id"
@@ -49,7 +65,9 @@ export function JobCard({ job }: { job: Job }) {
                 {job.salary.toLocaleString()} {job.salary_currency}
               </div>
               <div className="text-[10px] text-muted-foreground">{job.salary_period}</div>
-              <Bookmark className="w-4 h-4 text-muted-foreground inline-block mt-1" />
+              <button onClick={onToggle} aria-label="Save job" className="mt-1 inline-flex">
+                <Heart className={`w-4 h-4 ${saved ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />
+              </button>
             </div>
           </div>
           <div className="mt-3 flex items-center gap-2 flex-wrap">
