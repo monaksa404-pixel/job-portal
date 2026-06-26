@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SavedJobsRouteImport } from './routes/saved-jobs'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PaymentsRouteImport } from './routes/payments'
@@ -25,6 +26,11 @@ import { Route as JobsIdRouteImport } from './routes/jobs.$id'
 import { Route as JobsIdApplyRouteImport } from './routes/jobs.$id.apply'
 import { Route as ApplicationsSuccessApplicationIdRouteImport } from './routes/applications.success.$applicationId'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SavedJobsRoute = SavedJobsRouteImport.update({
   id: '/saved-jobs',
   path: '/saved-jobs',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/payments': typeof PaymentsRoute
   '/profile': typeof ProfileRoute
   '/saved-jobs': typeof SavedJobsRoute
+  '/settings': typeof SettingsRoute
   '/jobs/$id': typeof JobsIdRouteWithChildren
   '/jobs/': typeof JobsIndexRoute
   '/applications/success/$applicationId': typeof ApplicationsSuccessApplicationIdRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/payments': typeof PaymentsRoute
   '/profile': typeof ProfileRoute
   '/saved-jobs': typeof SavedJobsRoute
+  '/settings': typeof SettingsRoute
   '/jobs/$id': typeof JobsIdRouteWithChildren
   '/jobs': typeof JobsIndexRoute
   '/applications/success/$applicationId': typeof ApplicationsSuccessApplicationIdRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/payments': typeof PaymentsRoute
   '/profile': typeof ProfileRoute
   '/saved-jobs': typeof SavedJobsRoute
+  '/settings': typeof SettingsRoute
   '/jobs/$id': typeof JobsIdRouteWithChildren
   '/jobs/': typeof JobsIndexRoute
   '/applications/success/$applicationId': typeof ApplicationsSuccessApplicationIdRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/profile'
     | '/saved-jobs'
+    | '/settings'
     | '/jobs/$id'
     | '/jobs/'
     | '/applications/success/$applicationId'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/profile'
     | '/saved-jobs'
+    | '/settings'
     | '/jobs/$id'
     | '/jobs'
     | '/applications/success/$applicationId'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/profile'
     | '/saved-jobs'
+    | '/settings'
     | '/jobs/$id'
     | '/jobs/'
     | '/applications/success/$applicationId'
@@ -220,6 +232,7 @@ export interface RootRouteChildren {
   PaymentsRoute: typeof PaymentsRoute
   ProfileRoute: typeof ProfileRoute
   SavedJobsRoute: typeof SavedJobsRoute
+  SettingsRoute: typeof SettingsRoute
   JobsIdRoute: typeof JobsIdRouteWithChildren
   JobsIndexRoute: typeof JobsIndexRoute
   ApplicationsSuccessApplicationIdRoute: typeof ApplicationsSuccessApplicationIdRoute
@@ -227,6 +240,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/saved-jobs': {
       id: '/saved-jobs'
       path: '/saved-jobs'
@@ -358,6 +378,7 @@ const rootRouteChildren: RootRouteChildren = {
   PaymentsRoute: PaymentsRoute,
   ProfileRoute: ProfileRoute,
   SavedJobsRoute: SavedJobsRoute,
+  SettingsRoute: SettingsRoute,
   JobsIdRoute: JobsIdRouteWithChildren,
   JobsIndexRoute: JobsIndexRoute,
   ApplicationsSuccessApplicationIdRoute: ApplicationsSuccessApplicationIdRoute,
