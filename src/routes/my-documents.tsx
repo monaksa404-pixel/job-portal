@@ -10,7 +10,8 @@ export const Route = createFileRoute("/my-documents")({
   component: () => <DashboardLayout><DocsPage /></DashboardLayout>,
 });
 
-type Doc = { id: string; user_id: string; type: "cv" | "passport" | "other"; name: string; storage_path: string; created_at: string };
+type DocKind = "cv" | "passport" | "other";
+type Doc = { id: string; user_id: string; kind: DocKind; name: string; url: string; size_bytes: number; created_at: string };
 
 function DocsPage() {
   const { user } = useAuth();
@@ -25,26 +26,26 @@ function DocsPage() {
   };
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user]);
 
-  async function upload(file: File, type: Doc["type"]) {
+  async function upload(file: File, kind: DocKind) {
     if (!user) return;
     setBusy(true);
-    const path = `${user.id}/${type}/${Date.now()}-${file.name}`;
+    const path = `${user.id}/${kind}/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from("documents").upload(path, file, { upsert: false });
     if (!error) {
-      await supabase.from("user_documents").insert({ user_id: user.id, type, name: file.name, storage_path: path });
+      await supabase.from("user_documents").insert({ user_id: user.id, kind, name: file.name, url: path, size_bytes: file.size });
       load();
     }
     setBusy(false);
   }
 
   async function remove(d: Doc) {
-    await supabase.storage.from("documents").remove([d.storage_path]);
+    await supabase.storage.from("documents").remove([d.url]);
     await supabase.from("user_documents").delete().eq("id", d.id);
     load();
   }
 
   function open(d: Doc) {
-    supabase.storage.from("documents").createSignedUrl(d.storage_path, 60).then(({ data }) => {
+    supabase.storage.from("documents").createSignedUrl(d.url, 60).then(({ data }) => {
       if (data?.signedUrl) window.open(data.signedUrl, "_blank");
     });
   }
@@ -68,7 +69,7 @@ function DocsPage() {
             <div className="w-10 h-10 rounded-lg bg-blue-50 text-brand-blue grid place-items-center"><FileText className="w-5 h-5" /></div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-brand-navy truncate">{d.name}</div>
-              <div className="text-xs text-muted-foreground capitalize">{d.type} · {new Date(d.created_at).toLocaleDateString()}</div>
+              <div className="text-xs text-muted-foreground capitalize">{d.kind} · {new Date(d.created_at).toLocaleDateString()}</div>
             </div>
             <button onClick={() => open(d)} className="p-2 rounded-lg hover:bg-secondary text-brand-blue"><ExternalLink className="w-4 h-4" /></button>
             <button onClick={() => remove(d)} className="p-2 rounded-lg hover:bg-rose-50 text-rose-600"><Trash2 className="w-4 h-4" /></button>
@@ -79,7 +80,7 @@ function DocsPage() {
   );
 }
 
-function UploadCard({ label, type, onUpload, busy }: { label: string; type: Doc["type"]; onUpload: (f: File, t: Doc["type"]) => void; busy: boolean }) {
+function UploadCard({ label, type, onUpload, busy }: { label: string; type: DocKind; onUpload: (f: File, t: DocKind) => void; busy: boolean }) {
   return (
     <label className={`border-2 border-dashed border-border rounded-2xl p-5 text-center flex flex-col items-center gap-2 cursor-pointer hover:bg-secondary ${busy ? "opacity-50 pointer-events-none" : ""}`}>
       <Upload className="w-6 h-6 text-brand-blue" />
