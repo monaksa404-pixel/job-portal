@@ -17,6 +17,7 @@ import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MyDocumentsRouteImport } from './routes/my-documents'
 import { Route as MyApplicationsRouteImport } from './routes/my-applications'
 import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as HelpRouteImport } from './routes/help'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -66,6 +67,11 @@ const MessagesRoute = MessagesRouteImport.update({
   path: '/messages',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/categories': typeof CategoriesRoute
   '/dashboard': typeof DashboardRoute
+  '/help': typeof HelpRoute
   '/messages': typeof MessagesRoute
   '/my-applications': typeof MyApplicationsRoute
   '/my-documents': typeof MyDocumentsRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/categories': typeof CategoriesRoute
   '/dashboard': typeof DashboardRoute
+  '/help': typeof HelpRoute
   '/messages': typeof MessagesRoute
   '/my-applications': typeof MyApplicationsRoute
   '/my-documents': typeof MyDocumentsRoute
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/categories': typeof CategoriesRoute
   '/dashboard': typeof DashboardRoute
+  '/help': typeof HelpRoute
   '/messages': typeof MessagesRoute
   '/my-applications': typeof MyApplicationsRoute
   '/my-documents': typeof MyDocumentsRoute
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/categories'
     | '/dashboard'
+    | '/help'
     | '/messages'
     | '/my-applications'
     | '/my-documents'
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/categories'
     | '/dashboard'
+    | '/help'
     | '/messages'
     | '/my-applications'
     | '/my-documents'
@@ -206,6 +217,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/categories'
     | '/dashboard'
+    | '/help'
     | '/messages'
     | '/my-applications'
     | '/my-documents'
@@ -225,6 +237,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CategoriesRoute: typeof CategoriesRoute
   DashboardRoute: typeof DashboardRoute
+  HelpRoute: typeof HelpRoute
   MessagesRoute: typeof MessagesRoute
   MyApplicationsRoute: typeof MyApplicationsRoute
   MyDocumentsRoute: typeof MyDocumentsRoute
@@ -294,6 +307,13 @@ declare module '@tanstack/react-router' {
       path: '/messages'
       fullPath: '/messages'
       preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -371,6 +391,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CategoriesRoute: CategoriesRoute,
   DashboardRoute: DashboardRoute,
+  HelpRoute: HelpRoute,
   MessagesRoute: MessagesRoute,
   MyApplicationsRoute: MyApplicationsRoute,
   MyDocumentsRoute: MyDocumentsRoute,
