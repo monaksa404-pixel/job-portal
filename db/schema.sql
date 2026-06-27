@@ -379,3 +379,60 @@ exception when others then null; end $$;
 do $$ begin
   alter publication supabase_realtime add table public.applications;
 exception when others then null; end $$;
+
+-- =====================================================================
+-- ADMIN EXTENSION (companies, job source, posting type) — idempotent
+-- =====================================================================
+
+-- COMPANIES -----------------------------------------------------------
+create table if not exists public.companies (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  logo_url text,
+  website text,
+  verified boolean not null default true,
+  status boolean not null default true,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+grant select on public.companies to anon, authenticated;
+grant all on public.companies to service_role;
+alter table public.companies enable row level security;
+do $$ begin
+  create policy "Companies public read" on public.companies for select to anon, authenticated using (status = true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "Companies admin all" on public.companies for all to authenticated
+    using (public.has_role(auth.uid(), 'admin')) with check (public.has_role(auth.uid(), 'admin'));
+exception when duplicate_object then null; end $$;
+
+insert into public.companies (name, sort_order) values
+  ('HungerStation', 1),
+  ('Noon',          2),
+  ('Uber',          3),
+  ('Careem',        4),
+  ('STC',           5),
+  ('Amazon',        6)
+on conflict (name) do nothing;
+
+-- JOBS: add company_id, posted_by, added_companies, employment_type ---
+alter table public.jobs add column if not exists company_id uuid references public.companies(id) on delete set null;
+alter table public.jobs add column if not exists posted_by text not null default 'admin'; -- 'admin' | 'company'
+alter table public.jobs add column if not exists employment_type text not null default 'Permanent';
+alter table public.jobs add column if not exists added_companies jsonb not null default '[]'::jsonb;
+
+-- ADMIN: allow admin to read all profiles ----------------------------
+do $$ begin
+  create policy "Profiles admin read" on public.profiles for select to authenticated
+    using (public.has_role(auth.uid(), 'admin'));
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "Roles admin all" on public.user_roles for all to authenticated
+    using (public.has_role(auth.uid(), 'admin')) with check (public.has_role(auth.uid(), 'admin'));
+exception when duplicate_object then null; end $$;
+
+-- REALTIME for admin views -------------------------------------------
+do $$ begin alter publication supabase_realtime add table public.jobs;       exception when others then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.categories; exception when others then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.companies;  exception when others then null; end $$;
