@@ -15,12 +15,14 @@ function Reports() {
       supabase.from("jobs").select("id", { count: "exact", head: true }),
       supabase.from("applications").select("id", { count: "exact", head: true }),
     ]);
-    const { data: app } = await supabase.from("applications").select("application_status, payment_status, job:jobs(application_fee)");
-    const acc = (app ?? []).filter((x: { application_status: string }) => x.application_status === "accepted").length;
-    const rej = (app ?? []).filter((x: { application_status: string }) => x.application_status === "rejected").length;
-    const pen = (app ?? []).filter((x: { payment_status: string }) => x.payment_status === "pending").length;
-    const rev = (app ?? []).filter((x: { payment_status: string }) => x.payment_status === "verified")
-      .reduce((sum: number, x: { job: { application_fee: number | null } | null }) => sum + (x.job?.application_fee ?? 0), 0);
+    type AppRow = { application_status: string; payment_status: string; job: { application_fee: number | null } | null };
+    const res = await supabase.from("applications").select("application_status, payment_status, job:jobs(application_fee)");
+    const app = (res.data ?? []) as unknown as AppRow[];
+    const acc = app.filter((x) => x.application_status === "accepted").length;
+    const rej = app.filter((x) => x.application_status === "rejected").length;
+    const pen = app.filter((x) => x.payment_status === "pending").length;
+    const rev = app.filter((x) => x.payment_status === "verified")
+      .reduce((sum, x) => sum + (x.job?.application_fee ?? 0), 0);
     setS({ jobs: j ?? 0, apps: a ?? 0, accepted: acc, rejected: rej, pending: pen, revenue: rev });
   })(); }, []);
 

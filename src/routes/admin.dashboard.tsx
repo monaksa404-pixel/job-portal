@@ -56,9 +56,9 @@ function AdminDashboard() {
       ]);
 
       // top categories by jobs count
-      const { data: jc } = await supabase.from("jobs").select("category:categories(name)").eq("status", "active");
+      const { data: jc } = await supabase.from("jobs").select("category:categories(name)").eq("status", "active") as unknown as { data: { category: { name: string } | null }[] };
       const cmap: Record<string, number> = {};
-      (jc ?? []).forEach((r: { category: { name: string } | null }) => {
+      (jc ?? []).forEach((r) => {
         if (!r.category) return; cmap[r.category.name] = (cmap[r.category.name] ?? 0) + 1;
       });
       setTopCats(Object.entries(cmap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, v]) => ({ name, v })));
