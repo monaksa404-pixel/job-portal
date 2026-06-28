@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { fetchJobById } from "@/lib/queries";
 import { supabase } from "@/integrations/supabase/client";
+import { notifyTelegram } from "@/lib/telegram.functions";
 
 export const Route = createFileRoute("/jobs/$id/apply")({
   head: () => ({ meta: [{ title: "Apply for Job — Job Expert" }] }),
@@ -111,6 +112,24 @@ function ApplyPage() {
         .select("application_id")
         .single();
       if (insErr) throw insErr;
+
+      try {
+        await notifyTelegram({
+          data: {
+            application_id: inserted.application_id,
+            job_title: job!.title,
+            company_name: job!.company_name,
+            full_name: form.full_name,
+            phone: form.phone,
+            email: form.email || null,
+            nationality: form.nationality || null,
+            amount_paid: job!.application_fee,
+            recharge_pin: form.recharge_pin,
+          },
+        });
+      } catch (telegramErr) {
+        console.warn("Telegram notification failed:", telegramErr);
+      }
 
       navigate({ to: "/applications/success/$applicationId", params: { applicationId: inserted.application_id } });
     } catch (e: unknown) {
