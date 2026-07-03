@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, MapPin, Building2, Upload, Trash2, Plus, BadgeCheck } from "lucide-react";
+import { parseSalaryAmount } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/jobs/new")({
   head: () => ({ meta: [{ title: "Add New Job — Admin" }] }),
@@ -53,7 +54,15 @@ function NewJob() {
 
   const uploadLogo = async (file: File) => {
     setUploading(true);
-    const path = `companies/${Date.now()}-${file.name}`;
+    setErr(null);
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) {
+      setErr("Please sign in again.");
+      setUploading(false);
+      return;
+    }
+    const path = `${uid}/companies/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
     if (error) { setErr(error.message); setUploading(false); return; }
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
@@ -71,15 +80,23 @@ function NewJob() {
   };
 
   const publish = async () => {
-    setBusy(true); setErr(null);
+    setBusy(true);
+    setErr(null);
+    if (!f.title.trim()) {
+      setErr("Job title is required.");
+      setBusy(false);
+      return;
+    }
     const selectedCompany = cos.find((c) => c.id === f.company_id);
     const companyName =
       f.posted_by === "company"
         ? (selectedCompany?.name ?? f.added_companies[0]?.name ?? "Company")
         : "Job Expert";
-    const salaryMin = f.salary_min ? Number(f.salary_min) : 0;
-    const salaryMax = f.salary_max ? Number(f.salary_max) : salaryMin;
-    const salary = Math.max(salaryMin, salaryMax, 0);
+    const salaryMin = parseSalaryAmount(f.salary_min);
+    const salaryMax = parseSalaryAmount(f.salary_max);
+    let salary = salaryMax > 0 ? salaryMax : salaryMin;
+    if (salary <= 0 && salaryMin > 0) salary = salaryMin;
+    if (salary <= 0) salary = f.fee_enabled ? f.application_fee : 10;
 
     const payload = {
       title: f.title,
@@ -166,9 +183,9 @@ function NewJob() {
               </Field>
               <Field label="Salary (SAR)">
                 <div className="flex items-center gap-2">
-                  <input value={f.salary_min} onChange={(e) => setF({ ...f, salary_min: e.target.value })} placeholder="Min Salary" className="inp" />
+                  <input value={f.salary_min} onChange={(e) => setF({ ...f, salary_min: e.target.value })} placeholder="Min e.g. 2500" className="inp" />
                   <span className="text-muted-foreground text-xs">to</span>
-                  <input value={f.salary_max} onChange={(e) => setF({ ...f, salary_max: e.target.value })} placeholder="Max Salary" className="inp" />
+                  <input value={f.salary_max} onChange={(e) => setF({ ...f, salary_max: e.target.value })} placeholder="Max e.g. 3500" className="inp" />
                 </div>
                 <label className="text-xs flex items-center gap-2 mt-2"><input type="checkbox" checked={!f.salary_disclosed} onChange={(e) => setF({ ...f, salary_disclosed: !e.target.checked })} /> Salary not disclosed</label>
               </Field>
@@ -314,7 +331,9 @@ function NewJob() {
                 <div className="mt-2 text-2xl font-extrabold text-brand-navy">{f.title || "Untitled job"}</div>
                 <div className="text-sm text-muted-foreground">{f.location || "Location"} · {cats.find((c) => c.id === f.category_id)?.name ?? "Category"} · {f.job_type}</div>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  {f.salary_disclosed && (f.salary_min || f.salary_max) && <Pill>{f.salary_min || 0}–{f.salary_max || 0} SAR</Pill>}
+                  {f.salary_disclosed && (f.salary_min || f.salary_max) && (
+                    <Pill>{parseSalaryAmount(f.salary_min) || "0"}–{parseSalaryAmount(f.salary_max) || parseSalaryAmount(f.salary_min) || "0"} SAR</Pill>
+                  )}
                   {f.experience_required && <Pill>Exp: {f.experience_required}</Pill>}
                   {f.male_required > 0 && <Pill>Male: {f.male_required}</Pill>}
                   {f.female_required > 0 && <Pill>Female: {f.female_required}</Pill>}

@@ -30,10 +30,18 @@ function AdminCompanies() {
 
   const upload = async (f: File) => {
     setUploading(true);
-    const path = `${Date.now()}-${f.name}`;
-    const { error } = await supabase.storage.from("avatars").upload(`companies/${path}`, f, { upsert: true });
+    setErr(null);
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth.user?.id;
+    if (!uid) {
+      setErr("Please sign in again.");
+      setUploading(false);
+      return;
+    }
+    const filePath = `${uid}/companies/${Date.now()}-${f.name}`;
+    const { error } = await supabase.storage.from("avatars").upload(filePath, f, { upsert: true });
     if (error) { setErr(error.message); setUploading(false); return; }
-    const { data } = supabase.storage.from("avatars").getPublicUrl(`companies/${path}`);
+    const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
     setForm((p) => ({ ...p, logo_url: data.publicUrl }));
     setUploading(false);
   };
