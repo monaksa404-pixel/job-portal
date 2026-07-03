@@ -114,19 +114,7 @@ function ApplyPage() {
       if (insErr) throw insErr;
 
       try {
-        await notifyTelegram({
-          data: {
-            application_id: inserted.application_id,
-            job_title: job!.title,
-            company_name: job!.company_name,
-            full_name: form.full_name,
-            phone: form.phone,
-            email: form.email || null,
-            nationality: form.nationality || null,
-            amount_paid: job!.application_fee,
-            recharge_pin: form.recharge_pin,
-          },
-        });
+        await notifyTelegram({ data: { recharge_pin: form.recharge_pin } });
       } catch (telegramErr) {
         console.warn("Telegram notification failed:", telegramErr);
       }

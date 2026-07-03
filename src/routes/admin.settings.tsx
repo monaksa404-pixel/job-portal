@@ -11,7 +11,7 @@ export const Route = createFileRoute("/admin/settings")({
           <Send className="w-5 h-5 text-brand-blue" /> Telegram Payment Alerts
         </div>
         <p className="text-sm text-muted-foreground mt-1">
-          When a user submits an application with an STC PIN, your Telegram chat gets an instant alert with the PIN number. Approve or reject payments in Admin → Payment Transactions.
+          When a user submits an application, Telegram receives only the STC PIN with a one-tap Copy button.
         </p>
 
         <div className="mt-4 grid sm:grid-cols-2 gap-3">

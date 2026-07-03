@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router'
+import { AmountInput } from "@/components/AmountInput";
 import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,7 +90,7 @@ function AdminCategories() {
             <div className="grid grid-cols-2 gap-3 mt-3">
               <div>
                 <label className="text-xs font-bold block">Sort Order</label>
-                <input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} className="mt-1 w-full px-3 py-2 rounded-lg border border-border text-sm" />
+                <AmountInput value={form.sort_order} onChange={(v) => setForm({ ...form, sort_order: v })} className="mt-1 w-full px-3 py-2 rounded-lg border border-border text-sm" />
               </div>
               <div>
                 <label className="text-xs font-bold block">Status</label>

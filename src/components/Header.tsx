@@ -95,19 +95,21 @@ export function Header() {
           )}
         </div>
 
-        <button
-          className="lg:hidden p-2"
-          onClick={() => setOpen((v) => !v)}
-          aria-label="Toggle menu"
-        >
-          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6 text-brand-navy" />}
-        </button>
-        <Link to="/notifications" className="lg:hidden relative p-2" aria-label="Notifications">
-          <Bell className="w-5 h-5 text-brand-navy" />
-          {unread > 0 && (
-            <span className="absolute top-0 right-0 min-w-[16px] h-[16px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">{unread}</span>
-          )}
-        </Link>
+        <div className="lg:hidden flex items-center gap-0.5 shrink-0">
+          <Link to="/notifications" className="relative p-2 rounded-full hover:bg-secondary" aria-label="Notifications">
+            <Bell className="w-5 h-5 text-brand-navy" />
+            {unread > 0 && (
+              <span className="absolute top-0.5 right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">{unread}</span>
+            )}
+          </Link>
+          <button
+            className="p-2 rounded-full hover:bg-secondary"
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Toggle menu"
+          >
+            {open ? <X className="w-6 h-6 text-brand-navy" /> : <Menu className="w-6 h-6 text-brand-navy" />}
+          </button>
+        </div>
       </div>
 
       {open && (

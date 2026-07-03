@@ -39,6 +39,12 @@ export type Job = {
   status: "active" | "closed" | "draft";
   created_at: string;
   category?: Category | null;
+  company?: {
+    name: string;
+    logo_url: string | null;
+    website: string | null;
+    verified: boolean;
+  } | null;
 };
 
 export type Application = {

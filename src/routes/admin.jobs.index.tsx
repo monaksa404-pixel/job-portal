@@ -124,7 +124,7 @@ function AdminJobs() {
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex items-center gap-1">
                       <a href={`/jobs/${j.id}`} target="_blank" rel="noreferrer" className="p-1.5 rounded hover:bg-secondary"><Eye className="w-4 h-4 text-muted-foreground" /></a>
-                      <Link to="/admin/jobs/new" search={{ id: j.id } as never} className="p-1.5 rounded hover:bg-secondary"><Pencil className="w-4 h-4 text-muted-foreground" /></Link>
+                      <Link to="/admin/jobs/$id/edit" params={{ id: j.id }} className="p-1.5 rounded hover:bg-secondary"><Pencil className="w-4 h-4 text-muted-foreground" /></Link>
                       <button onClick={() => remove(j.id)} className="p-1.5 rounded hover:bg-rose-50"><Trash2 className="w-4 h-4 text-rose-600" /></button>
                     </div>
                   </td>

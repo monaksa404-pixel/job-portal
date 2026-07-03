@@ -28,7 +28,7 @@ export async function fetchCategoriesWithCounts(): Promise<Category[]> {
 export async function fetchRecentJobs(limit = 6): Promise<Job[]> {
   const { data, error } = await supabase
     .from("jobs")
-    .select("*, category:categories(*)")
+    .select("*, category:categories(*), company:companies(name, logo_url, website, verified)")
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -39,7 +39,7 @@ export async function fetchRecentJobs(limit = 6): Promise<Job[]> {
 export async function fetchAllJobs(): Promise<Job[]> {
   const { data, error } = await supabase
     .from("jobs")
-    .select("*, category:categories(*)")
+    .select("*, category:categories(*), company:companies(name, logo_url, website, verified)")
     .eq("status", "active")
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -49,7 +49,7 @@ export async function fetchAllJobs(): Promise<Job[]> {
 export async function fetchJobById(id: string): Promise<Job | null> {
   const { data, error } = await supabase
     .from("jobs")
-    .select("*, category:categories(*)")
+    .select("*, category:categories(*), company:companies(name, logo_url, website, verified)")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
