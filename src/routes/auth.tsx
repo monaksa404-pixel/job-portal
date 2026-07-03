@@ -21,23 +21,37 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   async function go() {
-    setErr(null); setBusy(true);
+    setErr(null);
+    setInfo(null);
+    setBusy(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email, password,
           options: { data: { full_name }, emailRedirectTo: `${window.location.origin}/` },
         });
         if (error) throw error;
+        if (data.user && !data.session) {
+          setInfo("Account created. Check your email to confirm, then sign in.");
+          return;
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
       navigate({ to: next ?? "/" });
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : "Authentication failed.");
+      const message = e instanceof Error ? e.message : "Authentication failed.";
+      if (message.includes("Failed to fetch")) {
+        setErr("Cannot reach Supabase. Check your internet and that VITE_SUPABASE_URL in .env is correct.");
+      } else if (message.includes("Invalid login credentials")) {
+        setErr("Wrong email or password. Create an account first if you have not signed up yet.");
+      } else {
+        setErr(message);
+      }
     } finally {
       setBusy(false);
     }
@@ -62,6 +76,7 @@ function AuthPage() {
         </div>
 
         {err && <div className="mt-3 text-sm text-rose-600">{err}</div>}
+        {info && <div className="mt-3 text-sm text-emerald-700">{info}</div>}
 
         <button
           onClick={go} disabled={busy || !email || !password}

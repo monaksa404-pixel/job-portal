@@ -35,11 +35,11 @@ function AdminNotifications() {
     if (targets.length === 0) { setErr("Select at least one user"); return; }
     setSending(true);
     if (tab === "notification") {
-      const rows = targets.map((id) => ({ user_id: id, title: title || "Notification", message: message.trim(), type: "info" }));
+      const rows = targets.map((id) => ({ user_id: id, title: title || "Notification", message: message.trim(), type: "system" }));
       const { error } = await supabase.from("notifications").insert(rows);
       if (error) { setErr(error.message); setSending(false); return; }
     } else if (tab === "message") {
-      const rows = targets.map((id) => ({ user_id: id, body: message.trim() }));
+      const rows = targets.map((id) => ({ user_id: id, title: title || "Message from Admin", message: message.trim() }));
       const { error } = await supabase.from("messages").insert(rows);
       if (error) { setErr(error.message); setSending(false); return; }
     } else {

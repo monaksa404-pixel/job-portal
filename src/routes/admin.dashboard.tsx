@@ -50,9 +50,8 @@ function AdminDashboard() {
       (js ?? []).forEach((r: { status: string }) => { map[r.status] = (map[r.status] ?? 0) + 1; });
       setByStatus([
         { name: "Active",  value: map["active"]  ?? 0, color: "#10b981" },
-        { name: "Pending", value: map["paused"]  ?? 0, color: "#f59e0b" },
         { name: "Draft",   value: map["draft"]   ?? 0, color: "#3b82f6" },
-        { name: "Expired", value: map["closed"]  ?? 0, color: "#ef4444" },
+        { name: "Closed",  value: map["closed"]  ?? 0, color: "#ef4444" },
       ]);
 
       // top categories by jobs count
@@ -280,6 +279,6 @@ function StatusBadge({ s }: { s: string }) {
 }
 
 function JobStatusBadge({ s }: { s: string }) {
-  const m: Record<string, string> = { active: "bg-emerald-100 text-emerald-700", paused: "bg-amber-100 text-amber-700", draft: "bg-sky-100 text-sky-700", closed: "bg-rose-100 text-rose-700" };
+  const m: Record<string, string> = { active: "bg-emerald-100 text-emerald-700", draft: "bg-sky-100 text-sky-700", closed: "bg-rose-100 text-rose-700" };
   return <span className={`text-[10px] font-semibold px-2 py-1 rounded-full ${m[s] ?? "bg-secondary"}`}>{s.replace(/^./, (c) => c.toUpperCase())}</span>;
 }

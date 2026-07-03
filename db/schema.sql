@@ -16,6 +16,9 @@ do $$ begin create type public.payment_status as enum ('pending', 'verified', 'r
 exception when duplicate_object then null; end $$;
 do $$ begin create type public.application_status as enum ('under_review', 'accepted', 'rejected');
 exception when duplicate_object then null; end $$;
+do $$ begin
+  alter type public.application_status add value if not exists 'shortlisted';
+exception when others then null; end $$;
 
 -- PROFILES ------------------------------------------------------------
 create table if not exists public.profiles (
@@ -436,3 +439,4 @@ exception when duplicate_object then null; end $$;
 do $$ begin alter publication supabase_realtime add table public.jobs;       exception when others then null; end $$;
 do $$ begin alter publication supabase_realtime add table public.categories; exception when others then null; end $$;
 do $$ begin alter publication supabase_realtime add table public.companies;  exception when others then null; end $$;
+do $$ begin alter publication supabase_realtime add table public.support_tickets; exception when others then null; end $$;

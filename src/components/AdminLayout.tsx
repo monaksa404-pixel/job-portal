@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Briefcase, FileText, Users, Building2, Tag,
-  Bell, Mail, Settings, BarChart3, CreditCard, LogOut, Menu, X, BadgeCheck,
+  Bell, Mail, Settings, BarChart3, CreditCard, LogOut, Menu, X, BadgeCheck, LifeBuoy,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Logo } from "./Logo";
@@ -12,6 +12,7 @@ const items = [
   { to: "/admin/dashboard",     label: "Dashboard",            icon: LayoutDashboard },
   { to: "/admin/jobs",          label: "Job Management",       icon: Briefcase },
   { to: "/admin/applications",  label: "Applications",         icon: FileText },
+  { to: "/admin/support",       label: "Support Tickets",      icon: LifeBuoy },
   { to: "/admin/users",         label: "Users",                icon: Users },
   { to: "/admin/categories",    label: "Categories",           icon: Tag },
   { to: "/admin/companies",     label: "Companies",            icon: Building2 },
@@ -64,7 +65,7 @@ export function AdminLayout({ children, title, subtitle, actions }: {
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-brand-navy text-white flex flex-col transition-transform lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="px-5 py-5 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Logo />
+            <Logo imgClassName="h-11 w-auto object-contain" />
             <span className="text-[10px] uppercase tracking-wider text-brand-yellow font-bold -ml-1">Admin Panel</span>
           </div>
           <button className="lg:hidden p-1" onClick={() => setMobileOpen(false)}><X className="w-5 h-5" /></button>

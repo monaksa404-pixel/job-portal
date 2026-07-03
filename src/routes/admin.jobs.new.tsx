@@ -72,15 +72,37 @@ function NewJob() {
 
   const publish = async () => {
     setBusy(true); setErr(null);
+    const selectedCompany = cos.find((c) => c.id === f.company_id);
+    const companyName =
+      f.posted_by === "company"
+        ? (selectedCompany?.name ?? f.added_companies[0]?.name ?? "Company")
+        : "Job Expert";
+    const salaryMin = f.salary_min ? Number(f.salary_min) : 0;
+    const salaryMax = f.salary_max ? Number(f.salary_max) : salaryMin;
+    const salary = Math.max(salaryMin, salaryMax, 0);
+
     const payload = {
-      title: f.title, category_id: f.category_id || null, job_type: f.job_type, employment_type: f.employment_type,
-      location: f.location || null,
-      salary_min: f.salary_min ? Number(f.salary_min) : null, salary_max: f.salary_max ? Number(f.salary_max) : null,
-      salary_disclosed: f.salary_disclosed, description: f.description || null,
-      posted_by: f.posted_by, company_id: f.posted_by === "company" ? (f.company_id || null) : null,
+      title: f.title,
+      company_name: companyName,
+      company_logo_url: selectedCompany?.logo_url ?? null,
+      category_id: f.category_id || null,
+      job_type: f.job_type,
+      employment_type: f.employment_type,
+      location: f.location || "Saudi Arabia",
+      salary,
+      description: f.description || "",
+      posted_by: f.posted_by,
+      company_id: f.posted_by === "company" ? (f.company_id || null) : null,
       added_companies: f.added_companies,
-      male_required: f.male_required, female_required: f.female_required, experience_required: f.experience_required || null,
-      duty_timing: f.duty_timing, accommodation: f.accommodation, food: f.food, transport: f.transport, medical_insurance: f.medical_insurance, overtime: f.overtime,
+      male_required: f.male_required,
+      female_required: f.female_required,
+      experience_required: f.experience_required || "1 - 2 Years",
+      duty_timing: f.duty_timing,
+      accommodation: f.accommodation,
+      food: f.food,
+      transport: f.transport,
+      medical_insurance: f.medical_insurance,
+      overtime: f.overtime,
       application_fee: f.fee_enabled ? f.application_fee : 0,
       status: "active" as const,
     };

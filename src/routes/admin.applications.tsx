@@ -87,7 +87,7 @@ function AdminApplications() {
     const { error } = await supabase.from("notifications").insert({
       user_id: selUser.id, title: "Message from Admin", message: msg.trim(), type: "info",
     });
-    await supabase.from("messages").insert({ user_id: selUser.id, body: msg.trim() });
+    await supabase.from("messages").insert({ user_id: selUser.id, title: "Message from Admin", message: msg.trim() });
     setSending(false);
     if (!error) { setSent("Notification sent."); setMsg(""); setTimeout(() => setSent(null), 2500); }
   };

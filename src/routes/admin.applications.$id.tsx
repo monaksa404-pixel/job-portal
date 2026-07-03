@@ -41,8 +41,8 @@ function AppDetail() {
   };
   const sendMessage = async () => {
     if (!a || !msg.trim()) return;
-    await supabase.from("messages").insert({ user_id: a.user_id, application_id: a.id, body: msg.trim() });
-    await supabase.from("notifications").insert({ user_id: a.user_id, title: "New message", message: msg.trim().slice(0, 120), type: "info" });
+    await supabase.from("messages").insert({ user_id: a.user_id, application_id: a.id, title: "Message from Admin", message: msg.trim() });
+    await supabase.from("notifications").insert({ user_id: a.user_id, title: "New message", message: msg.trim().slice(0, 120), type: "system" });
     setMsg("");
   };
   const sendPopup = async () => {

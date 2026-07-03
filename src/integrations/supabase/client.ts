@@ -1,26 +1,41 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClientOptions } from "@supabase/supabase-js";
 
+function env(name: string): string | undefined {
+  const value = import.meta.env[name];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+const projectId = env("VITE_SUPABASE_PROJECT_ID");
 const supabaseUrl =
-  (import.meta.env.VITE_SUPABASE_URL as string) ||
-  "https://placeholder.supabase.co";
-const supabaseKey =
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) ||
-  "placeholder-anon-key";
+  env("VITE_SUPABASE_URL") ??
+  (projectId ? `https://${projectId}.supabase.co` : undefined);
 
-if (
-  !import.meta.env.VITE_SUPABASE_URL ||
-  !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-) {
-  // eslint-disable-next-line no-console
-  console.warn(
-    "[supabase] Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY in .env — using placeholder client. Add real values to enable backend.",
+const supabaseKey =
+  env("VITE_SUPABASE_ANON_KEY") ?? env("VITE_SUPABASE_PUBLISHABLE_KEY");
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(
+    "[supabase] Set VITE_SUPABASE_URL (or VITE_SUPABASE_PROJECT_ID) and VITE_SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY) in .env",
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
+const isBrowser = typeof window !== "undefined";
+
+const options: SupabaseClientOptions = {
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    storage: typeof window !== "undefined" ? window.localStorage : undefined,
+    persistSession: isBrowser,
+    autoRefreshToken: isBrowser,
+    storage: isBrowser ? window.localStorage : undefined,
   },
-});
+};
+
+if (import.meta.env.SSR) {
+  try {
+    const { default: WebSocket } = await import("ws");
+    options.realtime = { transport: WebSocket };
+  } catch {
+    /* Realtime optional during SSR on some hosts */
+  }
+}
+
+export const supabase = createClient(supabaseUrl, supabaseKey, options);

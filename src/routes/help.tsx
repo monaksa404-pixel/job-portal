@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Headphones } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,21 +18,64 @@ function HelpPage() {
   const [message, setMessage] = useState("");
   const [rows, setRows] = useState<Ticket[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase.from("support_tickets").select("*")
-      .eq("user_id", user.id).order("created_at", { ascending: false });
+    setLoadErr(null);
+    const { data, error } = await supabase
+      .from("support_tickets")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    if (error) {
+      setLoadErr(error.message);
+      return;
+    }
     setRows((data ?? []) as Ticket[]);
-  };
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user]);
+  }, [user]);
+
+  useEffect(() => {
+    load();
+    if (!user) return;
+    const ch = supabase
+      .channel(`tickets-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "support_tickets", filter: `user_id=eq.${user.id}` }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user, load]);
 
   async function submit() {
-    if (!user || !subject.trim() || !message.trim()) return;
-    const { error } = await supabase.from("support_tickets").insert({ user_id: user.id, subject, message, status: "open" });
-    if (error) { setMsg(error.message); return; }
-    setSubject(""); setMessage(""); setMsg("Ticket submitted.");
-    load();
+    setMsg(null);
+    if (!user) {
+      setMsg("Please sign in first.");
+      return;
+    }
+    if (!subject.trim()) {
+      setMsg("Enter a subject.");
+      return;
+    }
+    if (!message.trim()) {
+      setMsg("Describe your issue in the message box.");
+      return;
+    }
+    setBusy(true);
+    const { data, error } = await supabase
+      .from("support_tickets")
+      .insert({ user_id: user.id, subject: subject.trim(), message: message.trim(), status: "open" })
+      .select("*")
+      .single();
+    setBusy(false);
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+    setSubject("");
+    setMessage("");
+    setMsg("Ticket submitted.");
+    if (data) setRows((prev) => [data as Ticket, ...prev]);
+    else load();
   }
 
   return (
@@ -40,14 +83,22 @@ function HelpPage() {
       <h1 className="text-2xl font-extrabold text-brand-navy flex items-center gap-2"><Headphones className="w-5 h-5 text-brand-blue" /> Help & Support</h1>
       <p className="text-sm text-muted-foreground">Our team is here to help with any questions.</p>
 
+      {loadErr && (
+        <div className="mt-4 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-lg px-3 py-2">
+          Could not load tickets: {loadErr}
+        </div>
+      )}
+
       <div className="mt-5 bg-white border border-border rounded-2xl p-5">
         <h2 className="font-bold text-brand-navy">Submit a Ticket</h2>
         <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject"
                className="mt-3 w-full px-3 py-2 border border-border rounded-lg text-sm" />
-        <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4} placeholder="Describe your issue…"
+        <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4} placeholder="Describe your issue (required)…"
                   className="mt-2 w-full px-3 py-2 border border-border rounded-lg text-sm" />
-        <button onClick={submit} className="mt-3 px-5 py-2 rounded-lg bg-brand-blue text-white text-sm font-semibold">Submit</button>
-        {msg && <div className="mt-2 text-xs text-muted-foreground">{msg}</div>}
+        <button onClick={submit} disabled={busy || !subject.trim() || !message.trim()} className="mt-3 px-5 py-2 rounded-lg bg-brand-blue text-white text-sm font-semibold disabled:opacity-50">
+          {busy ? "Submitting…" : "Submit"}
+        </button>
+        {msg && <div className={`mt-2 text-xs ${msg === "Ticket submitted." ? "text-emerald-700" : "text-rose-600"}`}>{msg}</div>}
       </div>
 
       <div className="mt-5">

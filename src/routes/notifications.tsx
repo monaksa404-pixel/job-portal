@@ -60,10 +60,12 @@ function NotificationsPage() {
   async function markAllRead() {
     if (!user) return;
     await supabase.from("notifications").update({ is_read: true }).eq("user_id", user.id).eq("is_read", false);
+    setRows((prev) => prev.map((n) => ({ ...n, is_read: true })));
   }
 
   async function markRead(id: string) {
     await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+    setRows((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
   }
 
   async function setPref(key: keyof NotificationPrefs, val: boolean) {
