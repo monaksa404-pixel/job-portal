@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, MapPin, Building2, Upload, Trash2, Plus, BadgeCheck } from "lucide-react";
-import { parseSalaryAmount } from "@/lib/utils";
+import { parseSalaryAmount, resolveJobSalary } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/jobs/new")({
   head: () => ({ meta: [{ title: "Add New Job — Admin" }] }),
@@ -92,21 +92,18 @@ function NewJob() {
       f.posted_by === "company"
         ? (selectedCompany?.name ?? f.added_companies[0]?.name ?? "Company")
         : "Job Expert";
-    const salaryMin = parseSalaryAmount(f.salary_min);
-    const salaryMax = parseSalaryAmount(f.salary_max);
-    let salary = salaryMax > 0 ? salaryMax : salaryMin;
-    if (salary <= 0 && salaryMin > 0) salary = salaryMin;
-    if (salary <= 0) salary = f.fee_enabled ? f.application_fee : 10;
+    const salary = resolveJobSalary(f.salary_min, f.salary_max, f.application_fee);
+    const applicationFee = parseSalaryAmount(f.application_fee) || (f.fee_enabled ? 50 : 0);
 
     const payload = {
-      title: f.title,
+      title: f.title.trim(),
       company_name: companyName,
       company_logo_url: selectedCompany?.logo_url ?? null,
       category_id: f.category_id || null,
       job_type: f.job_type,
       employment_type: f.employment_type,
-      location: f.location || "Saudi Arabia",
-      salary,
+      location: f.location.trim() || "Saudi Arabia",
+      salary: Number(salary),
       description: f.description || "",
       posted_by: f.posted_by,
       company_id: f.posted_by === "company" ? (f.company_id || null) : null,
@@ -120,9 +117,16 @@ function NewJob() {
       transport: f.transport,
       medical_insurance: f.medical_insurance,
       overtime: f.overtime,
-      application_fee: f.fee_enabled ? f.application_fee : 0,
+      application_fee: f.fee_enabled ? applicationFee : 0,
       status: "active" as const,
     };
+
+    if (!Number.isFinite(payload.salary) || payload.salary <= 0) {
+      setErr("Enter a valid salary (e.g. 2500) or set an application fee.");
+      setBusy(false);
+      return;
+    }
+
     const { error } = await supabase.from("jobs").insert(payload);
     setBusy(false);
     if (error) { setErr(error.message); return; }
@@ -291,7 +295,7 @@ function NewJob() {
                 {f.fee_enabled && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <Field label="Fee Amount (SAR) *">
-                      <input type="number" value={f.application_fee} onChange={(e) => setF({ ...f, application_fee: Number(e.target.value) })} className="inp" />
+                      <input type="number" min={0} value={f.application_fee} onChange={(e) => setF({ ...f, application_fee: parseSalaryAmount(e.target.value) || 0 })} className="inp" />
                       <div className="text-[11px] text-muted-foreground mt-1">Enter amount in Saudi Riyal (SAR)</div>
                     </Field>
                   </div>

@@ -101,7 +101,7 @@ create table if not exists public.jobs (
   company_name text not null,
   company_logo_url text,
   category_id uuid references public.categories(id) on delete set null,
-  salary numeric not null,
+  salary numeric not null default 0,
   salary_currency text not null default 'SAR',
   salary_period text not null default 'Monthly',
   location text not null,
@@ -446,3 +446,5 @@ do $$ begin alter publication supabase_realtime add table public.jobs;       exc
 do $$ begin alter publication supabase_realtime add table public.categories; exception when others then null; end $$;
 do $$ begin alter publication supabase_realtime add table public.companies;  exception when others then null; end $$;
 do $$ begin alter publication supabase_realtime add table public.support_tickets; exception when others then null; end $$;
+
+alter table public.jobs alter column salary set default 0;

