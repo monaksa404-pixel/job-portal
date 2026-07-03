@@ -32,7 +32,7 @@ export const Route = createFileRoute("/admin/settings")({
           <ol className="list-decimal pl-5 space-y-2 text-foreground/80 text-xs">
             <li>Open Telegram → search <span className="font-mono">@BotFather</span> → send <span className="font-mono">/newbot</span> → copy the bot token.</li>
             <li>Create a group (e.g. Job Expert Payments) → add your bot as admin.</li>
-            <li>Send any message in the group → open <span className="font-mono">https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</span> in browser → find <span className="font-mono">"chat":{"id":...}</span>.</li>
+            <li>Send any message in the group → open the getUpdates URL in your browser → copy the chat id number from the JSON response.</li>
             <li>Add <span className="font-mono">TELEGRAM_BOT_TOKEN</span> and <span className="font-mono">TELEGRAM_CHAT_ID</span> in Vercel → Settings → Environment Variables.</li>
             <li>Redeploy. Test by submitting a job application with a PIN.</li>
           </ol>
