@@ -429,6 +429,16 @@ alter table public.jobs add column if not exists company_id uuid references publ
 alter table public.jobs add column if not exists posted_by text not null default 'admin'; -- 'admin' | 'company'
 alter table public.jobs add column if not exists employment_type text not null default 'Permanent';
 alter table public.jobs add column if not exists added_companies jsonb not null default '[]'::jsonb;
+alter table public.jobs add column if not exists company_website text;
+
+update public.companies set website = 'https://www.noon.com' where lower(name) = 'noon' and (website is null or website = '');
+
+update public.jobs j set company_website = c.website
+from public.companies c
+where j.company_id = c.id and (j.company_website is null or j.company_website = '') and c.website is not null;
+
+update public.jobs set company_website = 'https://www.noon.com'
+where lower(company_name) = 'noon' and (company_website is null or company_website = '');
 
 -- ADMIN: allow admin to read all profiles ----------------------------
 do $$ begin

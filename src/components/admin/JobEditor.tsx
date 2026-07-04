@@ -148,15 +148,25 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       f.added_companies.find((c) => c.id === f.company_id)?.logo_url ??
       f.added_companies[0]?.logo_url ??
       null;
+    const companyWebsite =
+      selectedCompany?.website ??
+      f.added_companies.find((c) => c.id === f.company_id)?.website ??
+      f.added_companies[0]?.website ??
+      null;
     const salary = resolveJobSalary(f.salary_min, f.salary_max, f.application_fee);
     const applicationFee = parseSalaryAmount(f.application_fee) || (f.fee_enabled ? 50 : 0);
     const rating = Math.min(5, Math.max(1, Number(f.rating) || 4.5));
     const reviewsCount = Math.max(0, Math.floor(Number(f.reviews_count) || 0));
+    const syncedCompanies =
+      f.posted_by === "company" && selectedCompany
+        ? [{ id: selectedCompany.id, name: selectedCompany.name, logo_url: companyLogo, website: selectedCompany.website }]
+        : f.added_companies;
 
     return {
       title: f.title.trim(),
       company_name: companyName,
       company_logo_url: companyLogo,
+      company_website: companyWebsite,
       category_id: f.category_id || null,
       job_type: f.job_type,
       employment_type: f.employment_type,
@@ -168,7 +178,7 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       verified: f.posted_by === "company" ? (selectedCompany?.verified ?? true) : true,
       posted_by: f.posted_by,
       company_id: f.posted_by === "company" ? (f.company_id || null) : null,
-      added_companies: f.added_companies,
+      added_companies: syncedCompanies,
       male_required: f.male_required,
       female_required: f.female_required,
       experience_required: f.experience_required || "1 - 2 Years",

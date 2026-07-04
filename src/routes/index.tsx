@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   Search, MapPin, LayoutGrid, Briefcase, Users, Building2,
   ChevronRight, ShieldCheck, HeartHandshake, Lock, Headphones, Crosshair,
@@ -19,11 +20,27 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const navigate = useNavigate();
+  const [keyword, setKeyword] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [location, setLocation] = useState("");
   const categoriesQ = useQuery({ queryKey: ["categories-counts"], queryFn: fetchCategoriesWithCounts });
   const jobsQ = useQuery({ queryKey: ["recent-jobs", 6], queryFn: () => fetchRecentJobs(6) });
 
   const categories = categoriesQ.data ?? [];
   const jobs = jobsQ.data ?? [];
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    navigate({
+      to: "/jobs",
+      search: {
+        q: keyword.trim() || undefined,
+        category: categoryId || undefined,
+        location: location.trim() || undefined,
+      },
+    });
+  }
 
   return (
     <div className="container mx-auto max-w-7xl px-4 lg:px-6 py-4 lg:py-6">
@@ -57,32 +74,43 @@ function Index() {
         </div>
 
         {/* Search bar */}
-        <div className="relative px-4 lg:px-12 pb-6 lg:pb-8">
+        <form onSubmit={handleSearch} className="relative px-4 lg:px-12 pb-6 lg:pb-8">
           <div className="bg-white rounded-2xl shadow-xl p-2 lg:p-3 flex flex-col lg:flex-row gap-2">
             <div className="flex items-center gap-2 flex-1 px-3 py-2 border-b lg:border-b-0 lg:border-r border-border">
               <Search className="w-4 h-4 text-muted-foreground shrink-0" />
               <input
                 className="w-full text-sm outline-none bg-transparent"
                 placeholder="Job Title, Keyword or Company"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2 flex-1 px-3 py-2 border-b lg:border-b-0 lg:border-r border-border">
               <LayoutGrid className="w-4 h-4 text-muted-foreground shrink-0" />
-              <select className="w-full text-sm outline-none bg-transparent text-muted-foreground">
-                <option>All Categories</option>
-                {categories.map((c) => <option key={c.id}>{c.name}</option>)}
+              <select
+                className="w-full text-sm outline-none bg-transparent text-muted-foreground"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+              >
+                <option value="">All Categories</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div className="flex items-center gap-2 flex-1 px-3 py-2">
               <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
-              <input className="w-full text-sm outline-none bg-transparent" placeholder="Location" />
+              <input
+                className="w-full text-sm outline-none bg-transparent"
+                placeholder="Location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
               <Crosshair className="w-4 h-4 text-muted-foreground shrink-0" />
             </div>
-            <button className="bg-brand-blue text-white font-semibold text-sm rounded-xl px-6 py-3 flex items-center justify-center gap-2 hover:opacity-90">
+            <button type="submit" className="bg-brand-blue text-white font-semibold text-sm rounded-xl px-6 py-3 flex items-center justify-center gap-2 hover:opacity-90">
               <Search className="w-4 h-4" /> Search Jobs
             </button>
           </div>
-        </div>
+        </form>
       </section>
 
       {/* CATEGORIES */}

@@ -14,6 +14,7 @@ export type Job = {
   title: string;
   company_name: string;
   company_logo_url: string | null;
+  company_website?: string | null;
   company_id?: string | null;
   category_id: string | null;
   salary: number;

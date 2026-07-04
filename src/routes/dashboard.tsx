@@ -1,19 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { FileText, CheckCircle2, Users, XCircle, ChevronRight, Briefcase, Upload, FileCheck, Gift, BadgeCheck } from "lucide-react";
+import { FileText, CheckCircle2, Users, XCircle, ChevronRight, Briefcase, Upload, FileCheck, Gift } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchRecentJobs } from "@/lib/queries";
 import type { Application, Job } from "@/lib/types";
+import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Job Expert" }] }),
   component: () => <DashboardLayout><DashboardPage /></DashboardLayout>,
 });
 
-type AppRow = Application & { job?: { title: string; company_name: string; location: string; job_type: string } };
+type AppRow = Application & { job?: Job | null };
 
 function DashboardPage() {
   const { user } = useAuth();
@@ -25,7 +26,7 @@ function DashboardPage() {
     if (!user) return;
     const load = async () => {
       const { data } = await supabase.from("applications")
-        .select("*, job:jobs(title, company_name, location, job_type)")
+        .select("*, job:jobs(*, company:companies(name, logo_url, website, verified))")
         .eq("user_id", user.id).order("created_at", { ascending: false });
       setApps((data ?? []) as AppRow[]);
     };
@@ -72,22 +73,33 @@ function DashboardPage() {
             <p className="text-sm text-muted-foreground py-8 text-center">No applications yet. <Link to="/jobs" className="text-brand-blue font-semibold">Browse jobs</Link>.</p>
           ) : (
             <ul className="divide-y divide-border">
-              {apps.slice(0, 5).map((a) => (
-                <li key={a.id} className="py-3 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-amber-400 flex items-center justify-center text-brand-navy font-extrabold text-xs">
-                    {(a.job?.company_name ?? "JE").split(" ").map((w) => w[0]).slice(0, 2).join("")}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm text-brand-navy truncate">{a.job?.title}</div>
-                    <div className="text-xs text-muted-foreground truncate flex items-center gap-1">{a.job?.company_name} <BadgeCheck className="w-3 h-3 text-brand-blue" /></div>
+              {apps.slice(0, 5).map((a) => {
+                const job = a.job;
+                const co = job ? getJobCompanyInfo(job) : null;
+                return (
+                <li key={a.id} className="py-3 flex items-start gap-3">
+                  <div className="flex-1 min-w-0 overflow-visible">
+                    <div className="font-semibold text-sm text-brand-navy truncate">{job?.title}</div>
+                    {co && (
+                      <div className="mt-1.5">
+                        <CompanyBrandRow
+                          name={co.name}
+                          logoUrl={co.logoUrl}
+                          verified={co.verified}
+                          website={co.website}
+                          logoSize="xs"
+                          nameClassName="text-xs font-semibold text-brand-navy"
+                        />
+                      </div>
+                    )}
                   </div>
                   <StatusPill status={a.application_status} />
-                  <div className="hidden sm:block text-right">
+                  <div className="hidden sm:block text-right shrink-0">
                     <div className="text-[10px] text-muted-foreground">Applied on</div>
                     <div className="text-xs font-semibold text-brand-navy">{new Date(a.created_at).toLocaleDateString()}</div>
                   </div>
                 </li>
-              ))}
+              );})}
             </ul>
           )}
         </div>

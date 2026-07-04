@@ -41,7 +41,7 @@ export function JobCard({ job }: { job: Job }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-brand-navy leading-snug text-base">{job.title}</h3>
-          <div className="mt-2">
+          <div className="mt-2 overflow-visible">
             <CompanyBrandRow
               name={co.name}
               logoUrl={co.logoUrl}

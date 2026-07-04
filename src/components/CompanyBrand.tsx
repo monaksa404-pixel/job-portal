@@ -1,4 +1,5 @@
 import type { Job } from "@/lib/types";
+import blueTick from "@/images/blue-tick.png";
 
 export type CompanyInfo = {
   name: string;
@@ -16,7 +17,7 @@ export function getJobCompanyInfo(job: Job): CompanyInfo {
   return {
     name: company?.name ?? job.company_name,
     logoUrl: job.company_logo_url ?? company?.logo_url ?? byId?.logo_url ?? byName?.logo_url ?? null,
-    website: company?.website ?? byId?.website ?? byName?.website ?? null,
+    website: job.company_website ?? company?.website ?? byId?.website ?? byName?.website ?? null,
     verified: company?.verified ?? job.verified,
   };
 }
@@ -48,7 +49,7 @@ export function CompanyLogoBox({
 
   if (logoUrl) {
     return (
-      <div className={`${box} shrink-0 overflow-hidden border border-border/30 bg-white`}>
+      <div className={`${box} shrink-0 overflow-hidden rounded-lg bg-white`}>
         <img src={logoUrl} alt={name} className="w-full h-full object-cover" />
       </div>
     );
@@ -71,15 +72,12 @@ export function CompanyLogoBox({
 
 export function VerifiedBadge({ className = "w-[18px] h-[18px]" }: { className?: string }) {
   return (
-    <span className={`inline-flex shrink-0 items-center justify-center ${className}`} aria-label="Verified">
-      <svg viewBox="0 0 24 24" className="w-full h-full block" aria-hidden>
-        <circle cx="12" cy="12" r="12" fill="#2563EB" />
-        <path
-          fill="#fff"
-          d="M10.2 12.2 8.5 10.5 7.1 11.9l3.1 3.1 6.6-6.6-1.4-1.4-5.2 5.2z"
-        />
-      </svg>
-    </span>
+    <img
+      src={blueTick}
+      alt=""
+      aria-hidden
+      className={`inline-block shrink-0 object-contain ${className}`}
+    />
   );
 }
 
@@ -98,10 +96,10 @@ export function CompanyNameRow({
 }) {
   const site = formatWebsiteDisplay(website);
   return (
-    <div className="min-w-0 flex-1">
-      <div className="flex items-center gap-1.5 min-w-0">
+    <div className="min-w-0 flex-1 overflow-visible">
+      <div className="flex items-center gap-1.5 min-w-0 overflow-visible">
         <span className={`truncate min-w-0 ${nameClassName}`}>{name}</span>
-        {verified && <VerifiedBadge />}
+        {verified && <VerifiedBadge className="w-[18px] h-[18px] shrink-0" />}
       </div>
       {site && <div className={`truncate mt-0.5 ${websiteClassName}`}>{site}</div>}
     </div>
@@ -121,12 +119,12 @@ export function CompanyBrandRow({
   logoUrl: string | null;
   verified: boolean;
   website: string | null;
-  logoSize?: "xs" | "sm";
+  logoSize?: "xs" | "sm" | "md";
   nameClassName?: string;
   websiteClassName?: string;
 }) {
   return (
-    <div className="flex items-start gap-2.5 min-w-0">
+    <div className="flex items-start gap-2.5 min-w-0 overflow-visible">
       <CompanyLogoBox name={name} logoUrl={logoUrl} size={logoSize} />
       <CompanyNameRow
         name={name}

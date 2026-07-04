@@ -1,12 +1,24 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchAllJobs } from "@/lib/queries";
+import { filterJobs } from "@/lib/filterJobs";
 import { JobCard } from "@/components/JobCard";
 import { EmptyState } from "./index";
 
+type JobsSearch = {
+  q?: string;
+  category?: string;
+  location?: string;
+};
+
 export const Route = createFileRoute("/jobs/")({
+  validateSearch: (search: Record<string, unknown>): JobsSearch => ({
+    q: typeof search.q === "string" ? search.q : "",
+    category: typeof search.category === "string" ? search.category : "",
+    location: typeof search.location === "string" ? search.location : "",
+  }),
   head: () => ({
     meta: [
       { title: "All Jobs — Job Expert" },
@@ -17,11 +29,30 @@ export const Route = createFileRoute("/jobs/")({
 });
 
 function JobsPage() {
+  const navigate = useNavigate();
+  const urlSearch = Route.useSearch();
   const q = useQuery({ queryKey: ["all-jobs"], queryFn: fetchAllJobs });
-  const [search, setSearch] = useState("");
-  const jobs = (q.data ?? []).filter((j) =>
-    [j.title, j.company_name, j.location].join(" ").toLowerCase().includes(search.toLowerCase()),
-  );
+  const [keyword, setKeyword] = useState(urlSearch.q ?? "");
+  const [location, setLocation] = useState(urlSearch.location ?? "");
+
+  useEffect(() => {
+    setKeyword(urlSearch.q ?? "");
+    setLocation(urlSearch.location ?? "");
+  }, [urlSearch.q, urlSearch.location]);
+
+  const jobs = filterJobs(q.data ?? [], urlSearch.q ?? "", urlSearch.category, urlSearch.location);
+
+  function runSearch(e?: React.FormEvent) {
+    e?.preventDefault();
+    navigate({
+      to: "/jobs",
+      search: {
+        q: keyword.trim() || undefined,
+        category: urlSearch.category || undefined,
+        location: location.trim() || undefined,
+      },
+    });
+  }
 
   return (
     <div className="container mx-auto max-w-7xl px-4 lg:px-6 py-6">
@@ -30,25 +61,33 @@ function JobsPage() {
         <p className="mt-2 text-white/70 text-sm">
           Find your next opportunity from {q.data?.length ?? 0} open positions.
         </p>
-        <div className="mt-5 bg-white rounded-2xl p-2 flex items-center gap-2 max-w-2xl">
-          <Search className="w-4 h-4 text-muted-foreground ml-2" />
+        <form onSubmit={runSearch} className="mt-5 bg-white rounded-2xl p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 max-w-2xl">
+          <div className="flex items-center gap-2 flex-1 px-2">
+            <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+            <input
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="Search jobs, companies, locations..."
+              className="flex-1 text-sm outline-none bg-transparent text-foreground py-2"
+            />
+          </div>
           <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search jobs, companies, locations..."
-            className="flex-1 text-sm outline-none bg-transparent text-foreground"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="Location"
+            className="text-sm outline-none bg-transparent text-foreground px-3 py-2 border-t sm:border-t-0 sm:border-l border-border"
           />
-          <button className="bg-brand-blue text-white font-semibold text-sm rounded-xl px-5 py-2.5">
+          <button type="submit" className="bg-brand-blue text-white font-semibold text-sm rounded-xl px-5 py-2.5 shrink-0">
             Search
           </button>
-        </div>
+        </form>
       </section>
 
       <section className="mt-8">
         {jobs.length === 0 ? (
           <EmptyState
-            title="No jobs available"
-            note="Publish jobs from your admin dashboard and they'll show up here."
+            title={urlSearch.q || urlSearch.location ? "No jobs match your search" : "No jobs available"}
+            note={urlSearch.q || urlSearch.location ? "Try different keywords or clear filters." : "Publish jobs from your admin dashboard and they'll show up here."}
           />
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

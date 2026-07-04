@@ -2,12 +2,15 @@ import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-r
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-  User, Calendar, Upload, ChevronLeft, ChevronRight, Briefcase, BadgeCheck,
+  User, Calendar, Upload, ChevronLeft, ChevronRight, Briefcase,
   MapPin, CreditCard, Lock, ShieldCheck, Zap, Headphones, Info, FileText,
 } from "lucide-react";
 import { fetchJobById } from "@/lib/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyTelegram } from "@/lib/telegram.functions";
+import { PhoneInput, buildFullPhone } from "@/components/PhoneInput";
+import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
+import type { Job } from "@/lib/types";
 
 export const Route = createFileRoute("/jobs/$id/apply")({
   head: () => ({ meta: [{ title: "Apply for Job — Job Expert" }] }),
@@ -17,7 +20,8 @@ export const Route = createFileRoute("/jobs/$id/apply")({
 type FormState = {
   full_name: string;
   email: string;
-  phone: string;
+  phone_dial: string;
+  phone_number: string;
   date_of_birth: string;
   gender: "male" | "female" | "";
   nationality: string;
@@ -35,7 +39,7 @@ type FormState = {
 };
 
 const initialState: FormState = {
-  full_name: "", email: "", phone: "", date_of_birth: "", gender: "",
+  full_name: "", email: "", phone_dial: "+966", phone_number: "", date_of_birth: "", gender: "",
   nationality: "", current_location: "", marital_status: "",
   in_saudi_arabia: "", iqama_status: "", iqama_profession: "", iqama_number: "", iqama_expiry: "",
   experience: "", cv_file: null, passport_file: null, recharge_pin: "",
@@ -93,7 +97,7 @@ function ApplyPage() {
           job_id: job!.id,
           full_name: form.full_name,
           email: form.email || null,
-          phone: form.phone,
+          phone: buildFullPhone(form.phone_dial, form.phone_number),
           date_of_birth: form.date_of_birth || null,
           gender: form.gender || null,
           nationality: form.nationality || null,
@@ -200,23 +204,25 @@ function ApplyPage() {
 
 /* ---------------- shared headers / panels ---------------- */
 
-function ApplyHeader({ job, step }: { job: NonNullable<ReturnType<typeof fetchJobById> extends Promise<infer T> ? T : never>; step: number }) {
+function ApplyHeader({ job, step }: { job: Job; step: number }) {
+  const co = getJobCompanyInfo(job);
   return (
     <div className="bg-white rounded-2xl border border-border p-5 lg:p-6">
       <div className="grid lg:grid-cols-2 gap-4 items-start">
-        <div className="flex gap-4">
-          <div className="w-16 h-16 rounded-xl bg-amber-400 flex items-center justify-center text-brand-navy font-extrabold text-lg shrink-0">
-            {job!.company_name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+        <div>
+          <h1 className="text-lg lg:text-2xl font-extrabold text-brand-navy">Apply for {job.title}</h1>
+          <div className="mt-2.5">
+            <CompanyBrandRow
+              name={co.name}
+              logoUrl={co.logoUrl}
+              verified={co.verified}
+              website={co.website}
+              logoSize="sm"
+            />
           </div>
-          <div>
-            <h1 className="text-lg lg:text-2xl font-extrabold text-brand-navy">Apply for {job!.title}</h1>
-            <div className="flex items-center gap-1 text-sm font-semibold text-brand-navy">
-              {job!.company_name} <BadgeCheck className="w-4 h-4 text-brand-blue" />
-            </div>
-            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-              <MapPin className="w-3.5 h-3.5" /> {job!.location}
-              <span className="ml-2 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">{job!.job_type}</span>
-            </div>
+          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
+            <MapPin className="w-3.5 h-3.5" /> {job.location}
+            <span className="ml-2 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">{job.job_type}</span>
           </div>
         </div>
         <Stepper step={step} />
@@ -280,22 +286,20 @@ function Stepper({ step, light = false }: { step: number; light?: boolean }) {
   );
 }
 
-function JobSummary({ job }: { job: { title: string; company_name: string; location: string; job_type: string; salary: number; salary_currency: string; salary_period: string; experience_required: string; created_at: string } }) {
+function JobSummary({ job }: { job: Job }) {
+  const co = getJobCompanyInfo(job);
   return (
     <>
       <div className="bg-white rounded-2xl border border-border p-5">
         <h3 className="font-bold text-brand-navy mb-3">Job Summary</h3>
-        <div className="flex gap-3">
-          <div className="w-12 h-12 rounded-lg bg-amber-400 flex items-center justify-center text-brand-navy font-extrabold">
-            {job.company_name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-          </div>
-          <div className="min-w-0">
-            <div className="font-bold text-brand-navy">{job.title}</div>
-            <div className="text-sm text-muted-foreground flex items-center gap-1">
-              {job.company_name} <BadgeCheck className="w-4 h-4 text-brand-blue" />
-            </div>
-          </div>
-        </div>
+        <div className="font-bold text-brand-navy mb-2">{job.title}</div>
+        <CompanyBrandRow
+          name={co.name}
+          logoUrl={co.logoUrl}
+          verified={co.verified}
+          website={co.website}
+          logoSize="sm"
+        />
         <div className="mt-3 text-xs text-muted-foreground flex items-center gap-1">
           <MapPin className="w-3.5 h-3.5" /> {job.location}
         </div>
@@ -420,10 +424,13 @@ function StepPersonal({ form, set }: { form: FormState; set: <K extends keyof Fo
           <input type="email" className={inputCls} placeholder="Enter your email" value={form.email} onChange={(e) => set("email", e.target.value)} />
         </Field>
         <Field label="Mobile Number" required>
-          <div className="flex gap-2">
-            <div className="px-3 py-2.5 rounded-lg border border-border bg-secondary text-sm flex items-center gap-1">🇸🇦 +966</div>
-            <input className={inputCls} placeholder="5X XXX XXXX" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
-          </div>
+          <PhoneInput
+            dial={form.phone_dial}
+            number={form.phone_number}
+            onDialChange={(v) => set("phone_dial", v)}
+            onNumberChange={(v) => set("phone_number", v)}
+            inputClassName={inputCls}
+          />
         </Field>
         <Field label="Date of Birth" required>
           <div className="relative">
@@ -509,25 +516,27 @@ function StepDocuments({ form, set }: { form: FormState; set: <K extends keyof F
   );
 }
 
-function StepPayment({ form, set, job }: { form: FormState; set: <K extends keyof FormState>(k: K, v: FormState[K]) => void; job: { title: string; company_name: string; location: string; job_type: string; application_fee: number } }) {
+function StepPayment({ form, set, job }: { form: FormState; set: <K extends keyof FormState>(k: K, v: FormState[K]) => void; job: Job }) {
+  const co = getJobCompanyInfo(job);
   return (
     <>
       <div className="bg-white rounded-2xl border border-border p-5 lg:p-6">
         <h3 className="font-bold text-brand-navy mb-3">Application Summary</h3>
-        <div className="flex gap-4 items-center">
-          <div className="w-14 h-14 rounded-lg bg-amber-400 flex items-center justify-center text-brand-navy font-extrabold">
-            {job.company_name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-          </div>
-          <div className="flex-1">
-            <div className="font-bold text-brand-navy">{job.title}</div>
-            <div className="text-sm text-muted-foreground flex items-center gap-1">
-              {job.company_name} <BadgeCheck className="w-4 h-4 text-brand-blue" />
-            </div>
-            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+        <div className="flex gap-4 items-start">
+          <div className="flex-1 min-w-0">
+            <div className="font-bold text-brand-navy mb-2">{job.title}</div>
+            <CompanyBrandRow
+              name={co.name}
+              logoUrl={co.logoUrl}
+              verified={co.verified}
+              website={co.website}
+              logoSize="sm"
+            />
+            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
               <MapPin className="w-3 h-3" /> {job.location} · <span className="text-emerald-700 bg-emerald-50 px-1.5 rounded">{job.job_type}</span>
             </div>
           </div>
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <div className="text-brand-blue font-extrabold">{job.application_fee} SAR</div>
             <div className="text-[10px] text-muted-foreground">Application Fee</div>
           </div>
