@@ -26,11 +26,13 @@ function AdminNotifications() {
   const [ok, setOk] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [recent, setRecent] = useState<{ title: string; message: string; created_at: string }[]>([]);
+  const [userLoadErr, setUserLoadErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadUsers = async () => {
-    const merged = await fetchAdminUsers();
-    setUsers(merged.map((u) => ({ id: u.id, full_name: u.full_name, email: u.email })));
+    const { users, error } = await fetchAdminUsers();
+    setUsers(users.map((u) => ({ id: u.id, full_name: u.full_name, email: u.email })));
+    setUserLoadErr(error);
   };
 
   useEffect(() => {
@@ -131,6 +133,7 @@ function AdminNotifications() {
 
           {err && <div className="mt-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-lg px-3 py-2">{err}</div>}
           {ok && <div className="mt-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-lg px-3 py-2">{ok}</div>}
+          {userLoadErr && <div className="mt-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-3 py-2">{userLoadErr}</div>}
 
           {tab !== "message" && (
             <>

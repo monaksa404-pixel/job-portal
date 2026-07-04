@@ -483,3 +483,116 @@ from auth.users u
 where p.id = u.id and (p.email is null or p.email = '') and u.email is not null;
 
 alter table public.categories add column if not exists logo_url text;
+
+-- ADMIN: list all users (profiles + applicants + auth email) ------------
+create or replace function public.admin_get_users()
+returns table (
+  id uuid,
+  full_name text,
+  email text,
+  phone text,
+  country text,
+  nationality text,
+  gender public.gender_type,
+  created_at timestamptz,
+  applications_count bigint
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.has_role(auth.uid(), 'admin') then
+    raise exception 'not authorized';
+  end if;
+  return query
+  with user_ids as (
+    select p.id from public.profiles p
+    union
+    select a.user_id from public.applications a
+  )
+  select
+    ui.id,
+    coalesce(nullif(trim(p.full_name), ''), la.full_name)::text,
+    coalesce(nullif(trim(p.email), ''), la.email, u.email::text)::text,
+    coalesce(nullif(trim(p.phone), ''), la.phone)::text,
+    p.country,
+    coalesce(p.nationality, la.nationality)::text,
+    p.gender,
+    coalesce(p.created_at, la.created_at, u.created_at) as created_at,
+    (select count(*)::bigint from public.applications ap where ap.user_id = ui.id) as applications_count
+  from user_ids ui
+  left join public.profiles p on p.id = ui.id
+  left join auth.users u on u.id = ui.id
+  left join lateral (
+    select a2.full_name, a2.email, a2.phone, a2.nationality, a2.created_at
+    from public.applications a2
+    where a2.user_id = ui.id
+    order by a2.created_at desc
+    limit 1
+  ) la on true
+  order by coalesce(p.created_at, la.created_at, u.created_at) desc nulls last;
+end;
+$$;
+grant execute on function public.admin_get_users() to authenticated;
+
+-- Sync profile when user submits application --------------------------
+create or replace function public.sync_profile_from_application()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, email, full_name, phone, nationality)
+  values (new.user_id, new.email, new.full_name, new.phone, new.nationality)
+  on conflict (id) do update set
+    email = coalesce(nullif(excluded.email, ''), public.profiles.email),
+    full_name = coalesce(nullif(excluded.full_name, ''), public.profiles.full_name),
+    phone = coalesce(nullif(excluded.phone, ''), public.profiles.phone),
+    nationality = coalesce(excluded.nationality, public.profiles.nationality),
+    updated_at = now();
+  return new;
+end;
+$$;
+drop trigger if exists on_application_created_sync_profile on public.applications;
+create trigger on_application_created_sync_profile
+  after insert on public.applications
+  for each row execute function public.sync_profile_from_application();
+
+-- Backfill profiles from existing applications ------------------------
+insert into public.profiles (id, email, full_name, phone, nationality, created_at)
+select distinct on (a.user_id)
+  a.user_id, a.email, a.full_name, a.phone, a.nationality, a.created_at
+from public.applications a
+where not exists (select 1 from public.profiles p where p.id = a.user_id)
+order by a.user_id, a.created_at desc
+on conflict (id) do nothing;
+
+update public.profiles p set
+  email = coalesce(nullif(p.email, ''), a.email),
+  full_name = coalesce(nullif(p.full_name, ''), a.full_name),
+  phone = coalesce(nullif(p.phone, ''), a.phone),
+  nationality = coalesce(a.nationality, p.nationality),
+  updated_at = now()
+from (
+  select distinct on (user_id) user_id, email, full_name, phone, nationality
+  from public.applications
+  order by user_id, created_at desc
+) a
+where p.id = a.user_id;
+
+-- Admin read user_documents -------------------------------------------
+do $$ begin
+  create policy "User documents admin all" on public.user_documents for all to authenticated
+    using (public.has_role(auth.uid(), 'admin'))
+    with check (public.has_role(auth.uid(), 'admin'));
+exception when duplicate_object then null; end $$;
+
+-- Explicit admin SELECT on applications (belt-and-suspenders) ---------
+do $$ begin
+  create policy "Applications admin select" on public.applications for select to authenticated
+    using (public.has_role(auth.uid(), 'admin'));
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "Applications admin update" on public.applications for update to authenticated
+    using (public.has_role(auth.uid(), 'admin'))
+    with check (public.has_role(auth.uid(), 'admin'));
+exception when duplicate_object then null; end $$;

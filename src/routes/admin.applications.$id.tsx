@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { ADMIN_APPLICATION_DETAIL_SELECT } from "@/lib/admin-applications";
-import { getApplicationDocUrl, uploadAdminAttachment } from "@/lib/storage-url";
+import { getApplicationDocUrl, getDocumentSignedUrl, uploadAdminAttachment } from "@/lib/storage-url";
 import { AdminToast, AdminSpinner } from "@/components/admin/AdminToast";
 import { ArrowLeft, Check, X, Download, Send, Paperclip } from "lucide-react";
 
@@ -16,12 +16,18 @@ type Full = {
   id: string; application_id: string; created_at: string; payment_status: string; application_status: string;
   user_id: string; experience: string | null; recharge_pin: string | null; cv_url: string | null; passport_url: string | null;
   full_name: string; phone: string; email: string | null; nationality: string | null; gender: string | null; current_location: string | null;
+  date_of_birth: string | null; marital_status: string | null; in_saudi_arabia: boolean | null;
+  iqama_status: string | null; iqama_profession: string | null; iqama_number: string | null; iqama_expiry: string | null;
+  amount_paid: number;
   job: { title: string; location: string | null; application_fee: number | null; company_name: string; company: { name: string; logo_url: string | null } | null } | null;
 };
+
+type UserDoc = { id: string; kind: string; name: string; url: string; created_at: string };
 
 function AppDetail() {
   const { id } = Route.useParams();
   const [a, setA] = useState<Full | null>(null);
+  const [userDocs, setUserDocs] = useState<UserDoc[]>([]);
   const [msg, setMsg] = useState("");
   const [attachFile, setAttachFile] = useState<File | null>(null);
   const [popup, setPopup] = useState({ title: "", message: "" });
@@ -38,7 +44,15 @@ function AppDetail() {
   const load = async () => {
     const { data, error } = await supabase.from("applications").select(ADMIN_APPLICATION_DETAIL_SELECT).eq("id", id).maybeSingle();
     if (error) console.error("Failed to load application:", error.message);
-    setA(data as unknown as Full);
+    const row = data as unknown as Full | null;
+    setA(row);
+    if (row?.user_id) {
+      const { data: docs } = await supabase.from("user_documents").select("id, kind, name, url, created_at")
+        .eq("user_id", row.user_id).order("created_at", { ascending: false });
+      setUserDocs((docs ?? []) as UserDoc[]);
+    } else {
+      setUserDocs([]);
+    }
   };
   useEffect(() => { load(); }, [id]);
 
@@ -136,19 +150,42 @@ function AppDetail() {
               <Info label="Full Name" v={a.full_name} />
               <Info label="WhatsApp" v={a.phone} />
               <Info label="Email" v={a.email} />
+              <Info label="Date of Birth" v={a.date_of_birth} />
+              <Info label="Gender" v={a.gender} />
+              <Info label="Marital Status" v={a.marital_status} />
               <Info label="Nationality" v={a.nationality} />
               <Info label="Location" v={a.current_location} />
-              <Info label="Gender" v={a.gender} />
+              <Info label="In Saudi Arabia" v={a.in_saudi_arabia == null ? null : a.in_saudi_arabia ? "Yes" : "No"} />
               <Info label="Experience" v={a.experience ?? "—"} />
             </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-border p-5">
-            <div className="font-bold text-brand-navy">Documents</div>
+            <div className="font-bold text-brand-navy">Iqama Details</div>
+            <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+              <Info label="Iqama Status" v={a.iqama_status} />
+              <Info label="Iqama Profession" v={a.iqama_profession} />
+              <Info label="Iqama Number" v={a.iqama_number} mono />
+              <Info label="Iqama Expiry" v={a.iqama_expiry} />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-border p-5">
+            <div className="font-bold text-brand-navy">Application Documents</div>
             <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
               <DocLink label="CV / Resume" bucket="cv" path={a.cv_url} />
               <DocLink label="Additional Documents" bucket="passport" path={a.passport_url} />
             </div>
+            {userDocs.length > 0 && (
+              <div className="mt-4">
+                <div className="text-xs font-bold text-muted-foreground mb-2">From My Documents page</div>
+                <div className="space-y-2">
+                  {userDocs.map((d) => (
+                    <UserDocLink key={d.id} doc={d} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-border p-5">
@@ -259,5 +296,18 @@ function DocLink({ label, bucket, path }: { label: string; bucket: "cv" | "passp
       <span className="font-semibold text-brand-navy">{label}</span>
       <Download className="w-4 h-4 text-brand-blue" />
     </a>
+  );
+}
+
+function UserDocLink({ doc }: { doc: UserDoc }) {
+  const open = async () => {
+    const url = await getDocumentSignedUrl(doc.url);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  };
+  return (
+    <button type="button" onClick={open} className="w-full border border-border rounded-lg p-3 text-sm flex items-center justify-between hover:bg-secondary text-left">
+      <span className="font-semibold text-brand-navy capitalize">{doc.kind}: {doc.name}</span>
+      <Download className="w-4 h-4 text-brand-blue shrink-0" />
+    </button>
   );
 }
