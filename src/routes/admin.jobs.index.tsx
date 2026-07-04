@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Eye, Search, Briefcase } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Search, Briefcase, Star } from "lucide-react";
+import { AmountInput } from "@/components/AmountInput";
 
 export const Route = createFileRoute("/admin/jobs/")({
   head: () => ({ meta: [{ title: "Job Management — Admin" }] }),
@@ -18,6 +19,8 @@ type Row = {
   salary: number | null;
   company_name: string;
   application_fee: number | null;
+  rating: number;
+  reviews_count: number;
   category: { name: string } | null;
   company: { name: string; logo_url: string | null } | null;
   posted_by: string;
@@ -31,7 +34,7 @@ function AdminJobs() {
   const load = async () => {
     let qq = supabase
       .from("jobs")
-      .select("id, title, status, created_at, location, salary, company_name, application_fee, posted_by, category:categories(name), company:companies(name, logo_url)")
+      .select("id, title, status, created_at, location, salary, company_name, application_fee, rating, reviews_count, posted_by, category:categories(name), company:companies(name, logo_url)")
       .order("created_at", { ascending: false });
     if (status) qq = qq.eq("status", status);
     const { data } = await qq;
@@ -53,6 +56,14 @@ function AdminJobs() {
 
   const toggle = async (id: string, s: string) => {
     await supabase.from("jobs").update({ status: s === "active" ? "closed" : "active" }).eq("id", id);
+    load();
+  };
+
+  const saveReviews = async (id: string, rating: number, reviews_count: number) => {
+    await supabase.from("jobs").update({
+      rating: Math.min(5, Math.max(1, rating)),
+      reviews_count: Math.max(0, Math.floor(reviews_count)),
+    }).eq("id", id);
     load();
   };
 
@@ -89,6 +100,7 @@ function AdminJobs() {
                 <th className="text-left px-3 py-3 font-medium">Company</th>
                 <th className="text-left px-3 py-3 font-medium">Salary</th>
                 <th className="text-left px-3 py-3 font-medium">Fee</th>
+                <th className="text-left px-3 py-3 font-medium">Reviews</th>
                 <th className="text-left px-3 py-3 font-medium">Posted On</th>
                 <th className="text-left px-3 py-3 font-medium">Status</th>
                 <th></th>
@@ -96,7 +108,7 @@ function AdminJobs() {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={8} className="text-center text-muted-foreground py-10">No jobs found</td></tr>
+                <tr><td colSpan={9} className="text-center text-muted-foreground py-10">No jobs found</td></tr>
               )}
               {filtered.map((j) => (
                 <tr key={j.id} className="border-t border-border">
@@ -115,6 +127,13 @@ function AdminJobs() {
                   </td>
                   <td className="px-3 py-3 text-muted-foreground">{j.salary ? `${j.salary} SAR` : "—"}</td>
                   <td className="px-3 py-3 text-muted-foreground">{j.application_fee ? `${j.application_fee} SAR` : "Free"}</td>
+                  <td className="px-3 py-3">
+                    <ReviewsCell
+                      rating={j.rating ?? 4.5}
+                      reviewsCount={j.reviews_count ?? 0}
+                      onSave={(rating, reviews_count) => saveReviews(j.id, rating, reviews_count)}
+                    />
+                  </td>
                   <td className="px-3 py-3 text-muted-foreground">{new Date(j.created_at).toLocaleDateString()}</td>
                   <td className="px-3 py-3">
                     <button onClick={() => toggle(j.id, j.status)} className={`text-[10px] font-semibold px-2 py-1 rounded-full ${j.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
@@ -135,5 +154,33 @@ function AdminJobs() {
         </div>
       </div>
     </AdminLayout>
+  );
+}
+
+function ReviewsCell({ rating, reviewsCount, onSave }: { rating: number; reviewsCount: number; onSave: (rating: number, reviews_count: number) => void }) {
+  const [open, setOpen] = useState(false);
+  const [r, setR] = useState(rating);
+  const [c, setC] = useState(reviewsCount);
+
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => { setR(rating); setC(reviewsCount); setOpen((v) => !v); }} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-navy hover:text-brand-blue">
+        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+        {rating} · {reviewsCount}
+      </button>
+      {open && (
+        <div className="absolute z-20 top-full left-0 mt-1 bg-white border border-border rounded-xl shadow-lg p-3 w-44">
+          <div className="text-[10px] font-bold text-muted-foreground mb-2">Edit Reviews</div>
+          <label className="text-[10px] font-bold">Rating (1–5)</label>
+          <input type="number" min={1} max={5} step={0.1} value={r} onChange={(e) => setR(Number(e.target.value) || 4.5)} className="mt-0.5 w-full px-2 py-1 rounded border border-border text-xs mb-2" />
+          <label className="text-[10px] font-bold">Review Count</label>
+          <AmountInput value={c} onChange={setC} className="mt-0.5 w-full px-2 py-1 rounded border border-border text-xs" />
+          <div className="flex gap-1 mt-2">
+            <button type="button" onClick={() => setOpen(false)} className="flex-1 py-1 text-xs rounded border border-border">Cancel</button>
+            <button type="button" onClick={() => { onSave(r, c); setOpen(false); }} className="flex-1 py-1 text-xs rounded bg-brand-blue text-white font-semibold">Save</button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

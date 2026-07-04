@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAdminUsers } from "@/lib/admin-users";
 import { Search, Shield, ShieldOff } from "lucide-react";
 
 export const Route = createFileRoute("/admin/users")({
@@ -17,8 +18,8 @@ function AdminUsers() {
   const [q, setQ] = useState("");
 
   const load = async () => {
-    const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
-    setRows((data ?? []) as Profile[]);
+    const merged = await fetchAdminUsers();
+    setRows(merged);
     const { data: r } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
     setAdmins(new Set((r ?? []).map((x: { user_id: string }) => x.user_id)));
   };

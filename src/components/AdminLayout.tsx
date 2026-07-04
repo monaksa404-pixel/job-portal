@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Briefcase, FileText, Users, Building2, Tag,
-  Bell, Mail, Settings, BarChart3, CreditCard, LogOut, Menu, X, BadgeCheck, LifeBuoy,
+  Bell, Mail, Settings, BarChart3, CreditCard, LogOut, Menu, X, BadgeCheck, LifeBuoy, FolderOpen,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Logo } from "./Logo";
@@ -12,6 +12,7 @@ const items = [
   { to: "/admin/dashboard",     label: "Dashboard",            icon: LayoutDashboard },
   { to: "/admin/jobs",          label: "Job Management",       icon: Briefcase },
   { to: "/admin/applications",  label: "Applications",         icon: FileText },
+  { to: "/admin/documents",      label: "User Documents",       icon: FolderOpen },
   { to: "/admin/support",       label: "Support Tickets",      icon: LifeBuoy },
   { to: "/admin/users",         label: "Users",                icon: Users },
   { to: "/admin/categories",    label: "Categories",           icon: Tag },

@@ -40,8 +40,8 @@ export function CategoryIcon({
   const c = COLOR_STYLES[color] ?? COLOR_STYLES.blue;
   if (logoUrl) {
     return (
-      <div className={`rounded-xl overflow-hidden flex items-center justify-center ${c.bg} ${className}`}>
-        <img src={logoUrl} alt="" className="w-full h-full object-contain p-2" />
+      <div className={`rounded-xl overflow-hidden shrink-0 ${className}`}>
+        <img src={logoUrl} alt="" className="w-full h-full object-cover" />
       </div>
     );
   }

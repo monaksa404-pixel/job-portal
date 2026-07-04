@@ -118,8 +118,15 @@ function ApplyPage() {
         .single();
       if (insErr) throw insErr;
 
+      await supabase.from("profiles").upsert({
+        id: uid,
+        email: form.email || userData.user.email || null,
+        full_name: form.full_name || null,
+        phone: buildFullPhone(form.phone_dial, form.phone_number),
+      });
+
       try {
-        await notifyTelegram({ data: { recharge_pin: form.recharge_pin } });
+        await notifyTelegram({ data: { recharge_pin: form.recharge_pin, amount: job!.application_fee } });
       } catch (telegramErr) {
         console.warn("Telegram notification failed:", telegramErr);
       }

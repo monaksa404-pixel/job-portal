@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   Bookmark, MapPin, Star, Briefcase, Clock, Users, CreditCard,
-  Home, Utensils, Bus, ShieldPlus, Timer, ChevronRight, Share2, Facebook, Twitter, Link2,
+  Home, Utensils, Bus, ShieldPlus, Timer, ChevronRight, Share2,
   Info, Heart,
 } from "lucide-react";
+import { ShareJobButtons } from "@/components/ShareJobButtons";
 import { fetchJobById, formatRelative } from "@/lib/queries";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
 import { useAuth } from "@/hooks/use-auth";
@@ -201,12 +202,7 @@ function JobDetailPage() {
             <h3 className="font-bold text-brand-navy flex items-center gap-2">
               <Share2 className="w-4 h-4 text-brand-blue" /> Share this job
             </h3>
-            <div className="mt-3 flex gap-2">
-              <Social color="bg-emerald-500">W</Social>
-              <Social color="bg-blue-600"><Facebook className="w-4 h-4 text-white" /></Social>
-              <Social color="bg-sky-500"><Twitter className="w-4 h-4 text-white" /></Social>
-              <Social color="bg-slate-200 text-slate-600"><Link2 className="w-4 h-4" /></Social>
-            </div>
+            <ShareJobButtons title={job.title} />
           </div>
 
           <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-5">
@@ -222,28 +218,30 @@ function JobDetailPage() {
         </aside>
       </div>
 
-      <div className="fixed bottom-16 lg:bottom-0 inset-x-0 z-30 bg-white border-t border-border">
-        <div className="container mx-auto max-w-7xl px-4 lg:px-6 py-3 flex items-center justify-between gap-3">
-          <div className="hidden lg:block">
-            <div className="font-semibold text-brand-navy">Ready to apply for this job?</div>
-            <div className="text-xs text-muted-foreground">Submit your application and get hired!</div>
-          </div>
-          <div className="flex items-center gap-2 lg:gap-3 w-full lg:w-auto justify-end">
-            <button
-              type="button"
-              onClick={onSaveToggle}
-              className="px-4 py-2.5 rounded-xl border border-border text-sm font-semibold flex items-center gap-2 text-brand-navy"
-            >
-              <Heart className={`w-4 h-4 ${saved ? "fill-rose-500 text-rose-500" : ""}`} />
-              {saved ? "Saved" : "Save Job"}
-            </button>
-            <Link
-              to="/jobs/$id/apply"
-              params={{ id: job.id }}
-              className="px-5 py-2.5 rounded-xl bg-brand-blue text-white text-sm font-semibold flex items-center gap-2 hover:opacity-90"
-            >
-              Apply Now <ChevronRight className="w-4 h-4" />
-            </Link>
+      <div className="fixed bottom-16 lg:bottom-0 inset-x-0 z-30 bg-white border-t border-border shadow-[0_-4px_24px_rgba(15,23,42,0.08)]">
+        <div className="container mx-auto max-w-7xl px-4 lg:px-6 py-3">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div className="hidden lg:block">
+              <div className="font-semibold text-brand-navy">Ready to apply for this job?</div>
+              <div className="text-xs text-muted-foreground">Submit your application and get hired!</div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 w-full lg:flex lg:w-auto lg:gap-3">
+              <button
+                type="button"
+                onClick={onSaveToggle}
+                className="py-3 rounded-xl border-2 border-border bg-white text-sm font-semibold flex items-center justify-center gap-2 text-brand-navy hover:bg-secondary/50 active:scale-[0.98] transition"
+              >
+                <Heart className={`w-4 h-4 shrink-0 ${saved ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />
+                {saved ? "Saved" : "Save Job"}
+              </button>
+              <Link
+                to="/jobs/$id/apply"
+                params={{ id: job.id }}
+                className="py-3 rounded-xl bg-brand-blue text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-brand-blue/90 active:scale-[0.98] transition shadow-sm"
+              >
+                Apply Now <ChevronRight className="w-4 h-4 shrink-0" />
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -284,13 +282,6 @@ function Row({ label, value }: { label: string; value: string }) {
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="font-semibold text-brand-navy">{value}</dd>
     </div>
-  );
-}
-function Social({ children, color }: { children: React.ReactNode; color: string }) {
-  return (
-    <span className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold ${color}`}>
-      {children}
-    </span>
   );
 }
 function Check() {

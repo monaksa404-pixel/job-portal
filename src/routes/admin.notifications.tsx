@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { Send, MessageSquare, Bell, AlertCircle } from "lucide-react";
+import { fetchAdminUsers } from "@/lib/admin-users";
+import { uploadAdminAttachment } from "@/lib/storage-url";
+import { Send, MessageSquare, Bell, AlertCircle, Paperclip } from "lucide-react";
 
 export const Route = createFileRoute("/admin/notifications")({
   head: () => ({ meta: [{ title: "Send Notifications — Admin" }] }),
@@ -17,37 +19,89 @@ function AdminNotifications() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [allUsers, setAllUsers] = useState(false);
-  const [title, setTitle] = useState(""); const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false); const [ok, setOk] = useState<string | null>(null); const [err, setErr] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [attachFile, setAttachFile] = useState<File | null>(null);
+  const [sending, setSending] = useState(false);
+  const [ok, setOk] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
   const [recent, setRecent] = useState<{ title: string; message: string; created_at: string }[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const loadUsers = async () => {
+    const merged = await fetchAdminUsers();
+    setUsers(merged.map((u) => ({ id: u.id, full_name: u.full_name, email: u.email })));
+  };
 
   useEffect(() => {
-    supabase.from("profiles").select("id, full_name, email").order("created_at", { ascending: false }).then(({ data }) => setUsers((data ?? []) as Profile[]));
+    loadUsers();
     supabase.from("notifications").select("title, message, created_at").order("created_at", { ascending: false }).limit(10).then(({ data }) => setRecent((data ?? []) as typeof recent));
   }, []);
 
   const toggle = (id: string) => setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const send = async () => {
-    setErr(null); setOk(null);
+    setErr(null);
+    setOk(null);
     if (!message.trim()) { setErr("Message required"); return; }
     const targets = allUsers ? users.map((u) => u.id) : Array.from(selected);
     if (targets.length === 0) { setErr("Select at least one user"); return; }
     setSending(true);
-    if (tab === "notification") {
-      const rows = targets.map((id) => ({ user_id: id, title: title || "Notification", message: message.trim(), type: "system" }));
-      const { error } = await supabase.from("notifications").insert(rows);
-      if (error) { setErr(error.message); setSending(false); return; }
-    } else if (tab === "message") {
-      const rows = targets.map((id) => ({ user_id: id, title: title || "Message from Admin", message: message.trim() }));
-      const { error } = await supabase.from("messages").insert(rows);
-      if (error) { setErr(error.message); setSending(false); return; }
-    } else {
-      const rows = targets.map((id) => ({ user_id: id, title: title || "Notice", message: message.trim() }));
+
+    const basePayload = {
+      title: title || (tab === "message" ? "Message from Admin" : tab === "popup" ? "Notice" : "Notification"),
+      message: message.trim(),
+    };
+
+    if (tab === "popup") {
+      const rows = targets.map((id) => ({ user_id: id, title: basePayload.title, message: basePayload.message }));
       const { error } = await supabase.from("popups").insert(rows);
       if (error) { setErr(error.message); setSending(false); return; }
+    } else {
+      for (const id of targets) {
+        let attachment_url: string | null = null;
+        let attachment_name: string | null = null;
+        if (attachFile) {
+          try {
+            const uploaded = await uploadAdminAttachment(id, attachFile);
+            attachment_url = uploaded.path;
+            attachment_name = uploaded.name;
+          } catch {
+            setErr("Failed to upload attachment.");
+            setSending(false);
+            return;
+          }
+        }
+        if (tab === "notification") {
+          const { error } = await supabase.from("notifications").insert({
+            user_id: id,
+            title: basePayload.title,
+            message: basePayload.message,
+            type: "system",
+            attachment_url,
+            attachment_name,
+          });
+          if (error) { setErr(error.message); setSending(false); return; }
+        } else {
+          const { error } = await supabase.from("messages").insert({
+            user_id: id,
+            title: basePayload.title,
+            message: basePayload.message,
+            attachment_url,
+            attachment_name,
+          });
+          if (error) { setErr(error.message); setSending(false); return; }
+        }
+      }
     }
-    setOk(`Sent to ${targets.length} user(s).`); setMessage(""); setTitle(""); setSelected(new Set()); setSending(false);
+
+    setOk(`Sent to ${targets.length} user(s).`);
+    setMessage("");
+    setTitle("");
+    setAttachFile(null);
+    setSelected(new Set());
+    if (fileRef.current) fileRef.current.value = "";
+    setSending(false);
     setTimeout(() => setOk(null), 3000);
     const { data } = await supabase.from("notifications").select("title, message, created_at").order("created_at", { ascending: false }).limit(10);
     setRecent((data ?? []) as typeof recent);
@@ -65,10 +119,13 @@ function AdminNotifications() {
         <div className="bg-white rounded-2xl border border-border p-5">
           <div className="flex items-center gap-2 border-b border-border pb-3">
             {tabs.map((t) => {
-              const Icon = t.icon; const active = tab === t.k;
-              return <button key={t.k} onClick={() => setTab(t.k)} className={`px-3 py-1.5 rounded-lg text-sm font-semibold inline-flex items-center gap-1.5 ${active ? "bg-brand-blue text-white" : "text-muted-foreground hover:bg-secondary"}`}>
-                <Icon className="w-4 h-4" /> {t.label}
-              </button>;
+              const Icon = t.icon;
+              const active = tab === t.k;
+              return (
+                <button key={t.k} onClick={() => setTab(t.k)} className={`px-3 py-1.5 rounded-lg text-sm font-semibold inline-flex items-center gap-1.5 ${active ? "bg-brand-blue text-white" : "text-muted-foreground hover:bg-secondary"}`}>
+                  <Icon className="w-4 h-4" /> {t.label}
+                </button>
+              );
             })}
           </div>
 
@@ -85,8 +142,27 @@ function AdminNotifications() {
           <label className="text-xs font-bold mt-3 block">Message *</label>
           <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={6} placeholder="Type your message…" className="mt-1 w-full px-3 py-2 rounded-lg border border-border text-sm" />
 
+          {tab !== "popup" && (
+            <>
+              <label className="text-xs font-bold mt-3 block">Attach File <span className="text-muted-foreground font-normal">(Optional)</span></label>
+              <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" className="hidden" onChange={(e) => setAttachFile(e.target.files?.[0] ?? null)} />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="mt-1 w-full border-2 border-dashed border-border rounded-xl py-4 text-center text-xs text-muted-foreground hover:bg-secondary/40 transition"
+              >
+                <Paperclip className="w-5 h-5 mx-auto" />
+                <div className="mt-1 font-semibold text-brand-navy">{attachFile ? attachFile.name : "Click to upload document or image"}</div>
+                <div>PDF, DOC, DOCX, PNG, JPG (Max 10MB)</div>
+              </button>
+            </>
+          )}
+
           <div className="mt-4 flex items-center justify-between">
-            <label className="text-sm font-semibold flex items-center gap-2"><input type="checkbox" checked={allUsers} onChange={(e) => setAllUsers(e.target.checked)} /> Send to all users ({users.length})</label>
+            <label className="text-sm font-semibold flex items-center gap-2">
+              <input type="checkbox" checked={allUsers} onChange={(e) => setAllUsers(e.target.checked)} />
+              Send to all users ({users.length})
+            </label>
             <button onClick={send} disabled={sending} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-blue text-white text-sm font-semibold disabled:opacity-60">
               <Send className="w-4 h-4" /> {sending ? "Sending…" : "Send"}
             </button>
@@ -99,7 +175,7 @@ function AdminNotifications() {
                 return (
                   <label key={u.id} className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-secondary">
                     <input type="checkbox" checked={on} onChange={() => toggle(u.id)} />
-                    <div className="w-8 h-8 rounded-full bg-brand-blue/10 text-brand-blue text-xs font-bold flex items-center justify-center">{(u.full_name ?? "U").slice(0,1).toUpperCase()}</div>
+                    <div className="w-8 h-8 rounded-full bg-brand-blue/10 text-brand-blue text-xs font-bold flex items-center justify-center">{(u.full_name ?? u.email ?? "U").slice(0, 1).toUpperCase()}</div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-brand-navy truncate">{u.full_name ?? "—"}</div>
                       <div className="text-xs text-muted-foreground truncate">{u.email ?? "—"}</div>
