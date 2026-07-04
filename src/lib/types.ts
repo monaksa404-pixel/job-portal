@@ -14,6 +14,7 @@ export type Job = {
   title: string;
   company_name: string;
   company_logo_url: string | null;
+  company_id?: string | null;
   category_id: string | null;
   salary: number;
   salary_currency: string;
@@ -38,6 +39,7 @@ export type Job = {
   verified: boolean;
   status: "active" | "closed" | "draft";
   created_at: string;
+  added_companies?: { id: string; name: string; logo_url: string | null; website: string | null }[];
   category?: Category | null;
   company?: {
     name: string;

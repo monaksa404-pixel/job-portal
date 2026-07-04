@@ -90,9 +90,9 @@ function JobDetailPage() {
                   />
                 </div>
                 <div className="mt-2 flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1 shrink-0">
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    {job.rating} ({job.reviews_count} Reviews)
+                    {Number(job.rating).toFixed(1)} ({job.reviews_count.toLocaleString()} Reviews)
                   </span>
                   <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {job.location}</span>
                 </div>

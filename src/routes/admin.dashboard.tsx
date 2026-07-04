@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { ADMIN_DASHBOARD_APP_SELECT } from "@/lib/admin-applications";
 import { Briefcase, FileText, Users as UsersIcon, Eye, Plus, Send, Pencil, MoreHorizontal, TrendingUp, Calendar } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, Area, AreaChart, PieChart, Pie, Cell } from "recharts";
 
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/admin/dashboard")({
 });
 
 type Stat = { jobs: number; apps: number; users: number; views: number };
-type RecentApp = { id: string; created_at: string; application_status: string; job?: { title: string; company?: { name: string } | null } | null; profile?: { full_name: string | null } | null };
+type RecentApp = { id: string; created_at: string; application_status: string; full_name: string; job?: { title: string; company_name: string; company?: { name: string } | null } | null };
 type RecentJob = { id: string; title: string; status: string; created_at: string; category?: { name: string } | null; company?: { name: string } | null; _count?: number };
 
 function AdminDashboard() {
@@ -64,7 +65,7 @@ function AdminDashboard() {
 
       // recent apps
       const { data: ra } = await supabase.from("applications")
-        .select("id, created_at, application_status, job:jobs(title, company:companies(name)), profile:profiles!applications_user_id_fkey(full_name)")
+        .select(ADMIN_DASHBOARD_APP_SELECT)
         .order("created_at", { ascending: false }).limit(5);
       setRecentApps((ra ?? []) as unknown as RecentApp[]);
 
@@ -131,11 +132,11 @@ function AdminDashboard() {
             {recentApps.map((r) => (
               <div key={r.id} className="py-3 flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-brand-blue/10 text-brand-blue text-xs font-bold flex items-center justify-center">
-                  {(r.profile?.full_name ?? "U").slice(0,1).toUpperCase()}
+                  {r.full_name.slice(0, 1).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-brand-navy truncate">{r.profile?.full_name ?? "Applicant"}</div>
-                  <div className="text-xs text-muted-foreground truncate">{r.job?.title} {r.job?.company?.name ? `at ${r.job.company.name}` : ""}</div>
+                  <div className="text-sm font-semibold text-brand-navy truncate">{r.full_name}</div>
+                  <div className="text-xs text-muted-foreground truncate">{r.job?.title} {(r.job?.company?.name ?? r.job?.company_name) ? `at ${r.job?.company?.name ?? r.job?.company_name}` : ""}</div>
                 </div>
                 <StatusBadge s={r.application_status} />
               </div>

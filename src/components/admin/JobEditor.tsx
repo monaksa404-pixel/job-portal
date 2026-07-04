@@ -12,6 +12,7 @@ type Form = {
   title: string; category_id: string; job_type: string; employment_type: string;
   location: string; salary_min: string; salary_max: string; salary_disclosed: boolean;
   description: string;
+  rating: number; reviews_count: number;
   posted_by: "admin" | "company"; company_id: string;
   new_co_name: string; new_co_logo: string; new_co_website: string;
   added_companies: { id: string; name: string; logo_url: string | null; website: string | null }[];
@@ -24,6 +25,7 @@ type Form = {
 const empty: Form = {
   title: "", category_id: "", job_type: "Full-time", employment_type: "Permanent",
   location: "", salary_min: "", salary_max: "", salary_disclosed: true, description: "",
+  rating: 4.5, reviews_count: 120,
   posted_by: "admin", company_id: "", new_co_name: "", new_co_logo: "", new_co_website: "",
   added_companies: [], male_required: 0, female_required: 0, experience_required: "",
   duty_timing: "8 hours", accommodation: false, food: false, transport: false, medical_insurance: false, overtime: false,
@@ -38,6 +40,8 @@ type DbJob = Form & {
   posted_by: string;
   added_companies: Form["added_companies"];
   status: string;
+  rating: number;
+  reviews_count: number;
 };
 
 export function JobEditor({ jobId }: { jobId?: string }) {
@@ -99,6 +103,8 @@ export function JobEditor({ jobId }: { jobId?: string }) {
           overtime: !!j.overtime,
           fee_enabled: (j.application_fee ?? 0) > 0,
           application_fee: j.application_fee ?? 50,
+          rating: j.rating ?? 4.5,
+          reviews_count: j.reviews_count ?? 0,
         });
         setLoading(false);
       });
@@ -144,6 +150,8 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       null;
     const salary = resolveJobSalary(f.salary_min, f.salary_max, f.application_fee);
     const applicationFee = parseSalaryAmount(f.application_fee) || (f.fee_enabled ? 50 : 0);
+    const rating = Math.min(5, Math.max(1, Number(f.rating) || 4.5));
+    const reviewsCount = Math.max(0, Math.floor(Number(f.reviews_count) || 0));
 
     return {
       title: f.title.trim(),
@@ -155,6 +163,9 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       location: f.location.trim() || "Saudi Arabia",
       salary: Number(salary),
       description: f.description || "",
+      rating,
+      reviews_count: reviewsCount,
+      verified: f.posted_by === "company" ? (selectedCompany?.verified ?? true) : true,
       posted_by: f.posted_by,
       company_id: f.posted_by === "company" ? (f.company_id || null) : null,
       added_companies: f.added_companies,
@@ -267,6 +278,20 @@ export function JobEditor({ jobId }: { jobId?: string }) {
                   <input value={f.salary_max} onChange={(e) => setF({ ...f, salary_max: e.target.value })} placeholder="Max e.g. 3500" className="inp" />
                 </div>
                 <label className="text-xs flex items-center gap-2 mt-2"><input type="checkbox" checked={!f.salary_disclosed} onChange={(e) => setF({ ...f, salary_disclosed: !e.target.checked })} /> Salary not disclosed</label>
+              </Field>
+              <Field label="Rating (1–5)">
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  step={0.1}
+                  value={f.rating}
+                  onChange={(e) => setF({ ...f, rating: Number(e.target.value) || 4.5 })}
+                  className="inp"
+                />
+              </Field>
+              <Field label="Reviews Count">
+                <AmountInput value={f.reviews_count} onChange={(v) => setF({ ...f, reviews_count: v })} />
               </Field>
               <div className="lg:col-span-2">
                 <Field label="Job Description"><textarea value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} rows={6} placeholder="Write detailed job description…" className="inp" /></Field>
@@ -414,6 +439,7 @@ export function JobEditor({ jobId }: { jobId?: string }) {
                     <Pill>{parseSalaryAmount(f.salary_min) || "0"}–{parseSalaryAmount(f.salary_max) || parseSalaryAmount(f.salary_min) || "0"} SAR</Pill>
                   )}
                   {f.experience_required && <Pill>Exp: {f.experience_required}</Pill>}
+                  <Pill>{f.rating} ★ · {f.reviews_count} Reviews</Pill>
                   {f.male_required > 0 && <Pill>Male: {f.male_required}</Pill>}
                   {f.female_required > 0 && <Pill>Female: {f.female_required}</Pill>}
                   {f.accommodation && <Pill>Accommodation</Pill>}

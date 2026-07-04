@@ -9,10 +9,14 @@ export type CompanyInfo = {
 
 export function getJobCompanyInfo(job: Job): CompanyInfo {
   const company = job.company ?? null;
+  const added = job.added_companies ?? [];
+  const byId = job.company_id ? added.find((c) => c.id === job.company_id) : null;
+  const byName = added.find((c) => c.name.toLowerCase() === job.company_name.toLowerCase());
+
   return {
     name: company?.name ?? job.company_name,
-    logoUrl: job.company_logo_url ?? company?.logo_url ?? null,
-    website: company?.website ?? null,
+    logoUrl: job.company_logo_url ?? company?.logo_url ?? byId?.logo_url ?? byName?.logo_url ?? null,
+    website: company?.website ?? byId?.website ?? byName?.website ?? null,
     verified: company?.verified ?? job.verified,
   };
 }
@@ -41,12 +45,11 @@ export function CompanyLogoBox({
           : "w-11 h-11 rounded-lg";
   const text =
     size === "lg" ? "text-2xl" : size === "md" ? "text-lg" : size === "sm" ? "text-base" : "text-xs";
-  const pad = size === "xs" ? "p-1" : "p-1.5";
 
   if (logoUrl) {
     return (
-      <div className={`${box} bg-amber-400 shrink-0 overflow-hidden flex items-center justify-center ${pad}`}>
-        <img src={logoUrl} alt={name} className="w-full h-full object-contain" />
+      <div className={`${box} shrink-0 overflow-hidden border border-border/30 bg-white`}>
+        <img src={logoUrl} alt={name} className="w-full h-full object-cover" />
       </div>
     );
   }
@@ -66,18 +69,17 @@ export function CompanyLogoBox({
   );
 }
 
-export function VerifiedBadge({ className = "w-4 h-4" }: { className?: string }) {
+export function VerifiedBadge({ className = "w-[18px] h-[18px]" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={`shrink-0 ${className}`} aria-hidden>
-      <path
-        fill="#2563EB"
-        d="M12 2.5l2.2 1.65 2.75-.15.95 2.45 2.35 1.45-.95 2.45.15 2.75-2.2 1.65-1.65 2.2-2.75-.15-.95-2.45-2.35-1.45.95-2.45-.15-2.75L12 2.5z"
-      />
-      <path
-        fill="#fff"
-        d="M10.4 12.4 9 11l-1 1 2.4 2.4 5.2-5.2-1-1-4.6 4.2z"
-      />
-    </svg>
+    <span className={`inline-flex shrink-0 items-center justify-center ${className}`} aria-label="Verified">
+      <svg viewBox="0 0 24 24" className="w-full h-full block" aria-hidden>
+        <circle cx="12" cy="12" r="12" fill="#2563EB" />
+        <path
+          fill="#fff"
+          d="M10.2 12.2 8.5 10.5 7.1 11.9l3.1 3.1 6.6-6.6-1.4-1.4-5.2 5.2z"
+        />
+      </svg>
+    </span>
   );
 }
 
@@ -96,10 +98,10 @@ export function CompanyNameRow({
 }) {
   const site = formatWebsiteDisplay(website);
   return (
-    <div className="min-w-0">
-      <div className="flex items-center gap-1 min-w-0">
-        <span className={`truncate ${nameClassName}`}>{name}</span>
-        {verified && <VerifiedBadge className="w-4 h-4" />}
+    <div className="min-w-0 flex-1">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span className={`truncate min-w-0 ${nameClassName}`}>{name}</span>
+        {verified && <VerifiedBadge />}
       </div>
       {site && <div className={`truncate mt-0.5 ${websiteClassName}`}>{site}</div>}
     </div>
@@ -124,7 +126,7 @@ export function CompanyBrandRow({
   websiteClassName?: string;
 }) {
   return (
-    <div className="flex items-center gap-2.5 min-w-0">
+    <div className="flex items-start gap-2.5 min-w-0">
       <CompanyLogoBox name={name} logoUrl={logoUrl} size={logoSize} />
       <CompanyNameRow
         name={name}

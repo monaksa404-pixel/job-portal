@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { ADMIN_APPLICATION_LIST_SELECT } from "@/lib/admin-applications";
 import { Eye, Check, X, MessageSquare, MoreHorizontal, Search, FileText, Filter, Send, Paperclip, Bold, Italic, Underline } from "lucide-react";
 
 export const Route = createFileRoute("/admin/applications")({
@@ -11,9 +12,8 @@ export const Route = createFileRoute("/admin/applications")({
 
 type App = {
   id: string; application_id: string; created_at: string; payment_status: string; application_status: string;
-  user_id: string; recharge_pin: string | null;
-  job: { title: string; location: string | null; company: { name: string; logo_url: string | null } | null } | null;
-  profile: { full_name: string | null; phone: string | null; email: string | null } | null;
+  user_id: string; recharge_pin: string | null; full_name: string; email: string | null; phone: string;
+  job: { title: string; location: string | null; company_name: string; company: { name: string; logo_url: string | null } | null } | null;
 };
 type Job = { id: string; title: string };
 type Co = { id: string; name: string };
@@ -34,10 +34,15 @@ function AdminApplications() {
   const [sent, setSent] = useState<string | null>(null);
 
   const load = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("applications")
-      .select("id, application_id, created_at, payment_status, application_status, user_id, recharge_pin, job:jobs(title, location, company:companies(name, logo_url)), profile:profiles!applications_user_id_fkey(full_name, phone, email)")
+      .select(ADMIN_APPLICATION_LIST_SELECT)
       .order("created_at", { ascending: false }).limit(200);
+    if (error) {
+      console.error("Failed to load applications:", error.message);
+      setRows([]);
+      return;
+    }
     setRows((data ?? []) as unknown as App[]);
     // stats
     const all = (data ?? []) as unknown as App[];
@@ -59,7 +64,7 @@ function AdminApplications() {
   }, []);
 
   const filtered = useMemo(() => rows.filter((a) =>
-    (!q || (a.profile?.full_name ?? "").toLowerCase().includes(q.toLowerCase()) || (a.profile?.email ?? "").toLowerCase().includes(q.toLowerCase()) || (a.job?.title ?? "").toLowerCase().includes(q.toLowerCase()))
+    (!q || a.full_name.toLowerCase().includes(q.toLowerCase()) || (a.email ?? "").toLowerCase().includes(q.toLowerCase()) || (a.job?.title ?? "").toLowerCase().includes(q.toLowerCase()))
     && (!jobId || a.job?.title === jobs.find((j) => j.id === jobId)?.title)
     && (!status || a.application_status === status)
   ), [rows, q, jobId, status, jobs]);
@@ -68,8 +73,9 @@ function AdminApplications() {
     await supabase.from("applications").update({ application_status: s }).eq("id", id);
     await supabase.from("notifications").insert({
       user_id: userId, title: `Application ${s.replace("_"," ")}`,
-      message: `Your application for ${jobTitle ?? "the job"} is now ${s.replace("_"," ")}.`, type: s,
+      message: `Your application for ${jobTitle ?? "the job"} is now ${s.replace("_"," ")}.`, type: "application_update",
     });
+    load();
   };
 
   const verifyPayment = async (id: string, ok: boolean, userId: string) => {
@@ -77,8 +83,9 @@ function AdminApplications() {
     await supabase.from("notifications").insert({
       user_id: userId, title: `Payment ${ok ? "Verified" : "Rejected"}`,
       message: ok ? "Your STC recharge pin has been verified." : "Your STC recharge pin could not be verified.",
-      type: ok ? "accepted" : "rejected",
+      type: "application_update",
     });
+    load();
   };
 
   const sendNotif = async () => {
@@ -137,10 +144,10 @@ function AdminApplications() {
                   <tr key={a.id} className="border-t border-border">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-brand-blue/10 text-brand-blue text-xs font-bold flex items-center justify-center">{(a.profile?.full_name ?? "U").slice(0,1).toUpperCase()}</div>
+                        <div className="w-9 h-9 rounded-full bg-brand-blue/10 text-brand-blue text-xs font-bold flex items-center justify-center">{a.full_name.slice(0, 1).toUpperCase()}</div>
                         <div>
-                          <div className="font-semibold text-brand-navy">{a.profile?.full_name ?? "—"}</div>
-                          <div className="text-xs text-muted-foreground">{a.profile?.email ?? a.profile?.phone ?? ""}</div>
+                          <div className="font-semibold text-brand-navy">{a.full_name}</div>
+                          <div className="text-xs text-muted-foreground">{a.email ?? a.phone}</div>
                         </div>
                       </div>
                     </td>
@@ -150,8 +157,8 @@ function AdminApplications() {
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-2 text-muted-foreground">
-                        {a.job?.company?.logo_url && <img src={a.job.company.logo_url} className="w-5 h-5 rounded" />}
-                        {a.job?.company?.name ?? "—"}
+                        {a.job?.company?.logo_url && <img src={a.job.company.logo_url} alt="" className="w-5 h-5 rounded" />}
+                        {a.job?.company?.name ?? a.job?.company_name ?? "—"}
                       </div>
                     </td>
                     <td className="px-3 py-3">
@@ -169,7 +176,7 @@ function AdminApplications() {
                         <button onClick={() => verifyPayment(a.id, true, a.user_id)} className="p-1.5 rounded hover:bg-emerald-50" title="Verify Payment"><Check className="w-4 h-4 text-emerald-600" /></button>
                         <button onClick={() => setStatusFor(a.id, "accepted", a.user_id, a.job?.title)} className="p-1.5 rounded hover:bg-emerald-50" title="Accept"><Check className="w-4 h-4 text-emerald-600" /></button>
                         <button onClick={() => setStatusFor(a.id, "rejected", a.user_id, a.job?.title)} className="p-1.5 rounded hover:bg-rose-50" title="Reject"><X className="w-4 h-4 text-rose-600" /></button>
-                        <button onClick={() => setSelUser({ id: a.user_id, name: a.profile?.full_name ?? "User" })} className="p-1.5 rounded hover:bg-secondary" title="Send Notification"><MessageSquare className="w-4 h-4 text-brand-blue" /></button>
+                        <button onClick={() => setSelUser({ id: a.user_id, name: a.full_name })} className="p-1.5 rounded hover:bg-secondary" title="Send Notification"><MessageSquare className="w-4 h-4 text-brand-blue" /></button>
                         <button className="p-1.5 rounded hover:bg-secondary"><MoreHorizontal className="w-4 h-4 text-muted-foreground" /></button>
                       </div>
                     </td>

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { ADMIN_APPLICATION_DETAIL_SELECT } from "@/lib/admin-applications";
 import { ArrowLeft, Check, X, Download, Send } from "lucide-react";
 
 export const Route = createFileRoute("/admin/applications/$id")({
@@ -12,8 +13,8 @@ export const Route = createFileRoute("/admin/applications/$id")({
 type Full = {
   id: string; application_id: string; created_at: string; payment_status: string; application_status: string;
   user_id: string; experience: string | null; recharge_pin: string | null; cv_url: string | null; passport_url: string | null;
-  job: { title: string; location: string | null; application_fee: number | null; company: { name: string; logo_url: string | null } | null } | null;
-  profile: { full_name: string | null; phone: string | null; email: string | null; nationality: string | null; country: string | null; gender: string | null } | null;
+  full_name: string; phone: string; email: string | null; nationality: string | null; gender: string | null; current_location: string | null;
+  job: { title: string; location: string | null; application_fee: number | null; company_name: string; company: { name: string; logo_url: string | null } | null } | null;
 };
 
 function AppDetail() {
@@ -22,7 +23,8 @@ function AppDetail() {
   const [msg, setMsg] = useState(""); const [popup, setPopup] = useState({ title: "", message: "" });
 
   const load = async () => {
-    const { data } = await supabase.from("applications").select("*, job:jobs(title, location, application_fee, company:companies(name, logo_url)), profile:profiles!applications_user_id_fkey(full_name, phone, email, nationality, country, gender)").eq("id", id).maybeSingle();
+    const { data, error } = await supabase.from("applications").select(ADMIN_APPLICATION_DETAIL_SELECT).eq("id", id).maybeSingle();
+    if (error) console.error("Failed to load application:", error.message);
     setA(data as unknown as Full);
   };
   useEffect(() => { load(); }, [id]);
@@ -30,13 +32,13 @@ function AppDetail() {
   const setStatus = async (s: "accepted" | "rejected" | "shortlisted" | "under_review") => {
     if (!a) return;
     await supabase.from("applications").update({ application_status: s }).eq("id", a.id);
-    await supabase.from("notifications").insert({ user_id: a.user_id, title: `Application ${s.replace("_"," ")}`, message: `Your application for ${a.job?.title ?? ""} is now ${s.replace("_"," ")}.`, type: s });
+    await supabase.from("notifications").insert({ user_id: a.user_id, title: `Application ${s.replace("_"," ")}`, message: `Your application for ${a.job?.title ?? ""} is now ${s.replace("_"," ")}.`, type: "application_update" });
     load();
   };
   const verify = async (ok: boolean) => {
     if (!a) return;
     await supabase.from("applications").update({ payment_status: ok ? "verified" : "rejected" }).eq("id", a.id);
-    await supabase.from("notifications").insert({ user_id: a.user_id, title: `Payment ${ok ? "Verified" : "Rejected"}`, message: ok ? "STC recharge pin verified." : "STC recharge pin rejected.", type: ok ? "accepted" : "rejected" });
+    await supabase.from("notifications").insert({ user_id: a.user_id, title: `Payment ${ok ? "Verified" : "Rejected"}`, message: ok ? "STC recharge pin verified." : "STC recharge pin rejected.", type: "application_update" });
     load();
   };
   const sendMessage = async () => {
@@ -62,12 +64,12 @@ function AppDetail() {
           <div className="bg-white rounded-2xl border border-border p-5">
             <div className="font-bold text-brand-navy">Applicant</div>
             <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-              <Info label="Full Name" v={a.profile?.full_name} />
-              <Info label="WhatsApp" v={a.profile?.phone} />
-              <Info label="Email" v={a.profile?.email} />
-              <Info label="Nationality" v={a.profile?.nationality} />
-              <Info label="Country" v={a.profile?.country} />
-              <Info label="Gender" v={a.profile?.gender} />
+              <Info label="Full Name" v={a.full_name} />
+              <Info label="WhatsApp" v={a.phone} />
+              <Info label="Email" v={a.email} />
+              <Info label="Nationality" v={a.nationality} />
+              <Info label="Location" v={a.current_location} />
+              <Info label="Gender" v={a.gender} />
               <Info label="Experience" v={a.experience ?? "—"} />
             </div>
           </div>
