@@ -64,9 +64,13 @@ function MyApplications() {
               <div className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
                 {job?.location}
               </div>
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <div className="text-[11px] text-muted-foreground flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> ID: {r.application_id} · Paid {r.amount_paid} SAR · Payment {r.payment_status}
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <span className="text-[11px] text-muted-foreground flex items-center gap-1 shrink-0">
+                    <Clock className="w-3 h-3 shrink-0" />
+                    ID: {r.application_id} · Paid {r.amount_paid} SAR
+                  </span>
+                  <PaymentBadge status={r.payment_status} />
                 </div>
                 <Badge status={r.application_status} />
               </div>
@@ -75,6 +79,20 @@ function MyApplications() {
         })}
       </div>
     </div>
+  );
+}
+
+function PaymentBadge({ status }: { status: Application["payment_status"] }) {
+  const map = {
+    verified: { c: "bg-emerald-100 text-emerald-800 border border-emerald-200", t: "Payment Verified" },
+    rejected: { c: "bg-rose-100 text-rose-800 border border-rose-200", t: "Payment Rejected" },
+    pending: { c: "bg-amber-100 text-amber-800 border border-amber-200", t: "Payment Pending" },
+  } as const;
+  const s = map[status] ?? map.pending;
+  return (
+    <span className={`text-xs font-bold px-2.5 py-1 rounded-md whitespace-nowrap shrink-0 ${s.c}`}>
+      {s.t}
+    </span>
   );
 }
 

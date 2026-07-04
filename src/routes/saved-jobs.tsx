@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Heart, Trash2 } from "lucide-react";
+import { Heart, MapPin, Trash2 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
 import type { Job } from "@/lib/types";
 
 export const Route = createFileRoute("/saved-jobs")({
@@ -29,7 +30,10 @@ function SavedJobsPage() {
       return;
     }
     const jobIds = saved.map((s) => s.job_id);
-    const { data: jobs } = await supabase.from("jobs").select("*").in("id", jobIds);
+    const { data: jobs } = await supabase
+      .from("jobs")
+      .select("*, company:companies(name, logo_url, website, verified)")
+      .in("id", jobIds);
     const jobMap = new Map((jobs ?? []).map((j) => [j.id, j as Job]));
     setRows(
       saved.map((s) => ({
@@ -58,19 +62,35 @@ function SavedJobsPage() {
             <div className="text-sm text-muted-foreground">No saved jobs yet.</div>
             <Link to="/jobs" className="mt-3 inline-block px-4 py-2 rounded-lg bg-brand-blue text-white text-sm font-semibold">Browse Jobs</Link>
           </div>
-        ) : visible.map((r) => (
-          <div key={r.id} className="bg-white border border-border rounded-2xl p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-400 flex items-center justify-center text-brand-navy font-extrabold">
-              {r.job!.company_name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+        ) : visible.map((r) => {
+          const job = r.job!;
+          const co = getJobCompanyInfo(job);
+          return (
+            <div key={r.id} className="bg-white border border-border rounded-2xl p-4 flex items-start gap-3">
+              <Link to="/jobs/$id" params={{ id: job.id }} className="flex-1 min-w-0">
+                <div className="font-bold text-brand-navy leading-snug">{job.title}</div>
+                <div className="mt-2 overflow-visible">
+                  <CompanyBrandRow
+                    name={co.name}
+                    logoUrl={co.logoUrl}
+                    verified={co.verified}
+                    website={co.website}
+                    logoSize="sm"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
+                  <MapPin className="w-3 h-3 shrink-0" /> {job.location}
+                </p>
+                <div className="text-sm font-bold text-brand-blue mt-2">
+                  {job.salary.toLocaleString()} {job.salary_currency}
+                </div>
+              </Link>
+              <button onClick={() => remove(r.id)} className="p-2 rounded-lg text-rose-600 hover:bg-rose-50 shrink-0" aria-label="Remove saved job">
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
-            <Link to="/jobs/$id" params={{ id: r.job!.id }} className="flex-1 min-w-0">
-              <div className="font-bold text-brand-navy truncate">{r.job!.title}</div>
-              <div className="text-xs text-muted-foreground truncate">{r.job!.company_name} · {r.job!.location}</div>
-              <div className="text-xs font-semibold text-brand-blue mt-1">{r.job!.salary.toLocaleString()} {r.job!.salary_currency}</div>
-            </Link>
-            <button onClick={() => remove(r.id)} className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
