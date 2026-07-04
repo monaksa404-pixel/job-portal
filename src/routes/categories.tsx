@@ -88,7 +88,7 @@ function CategoriesPage() {
               to="/jobs"
               className="bg-white border border-border rounded-2xl p-5 flex flex-col items-center text-center hover:border-brand-blue/40 hover:shadow-md transition"
             >
-              <CategoryIcon name={c.icon} color={c.color} size={26} className="w-16 h-16" />
+              <CategoryIcon name={c.icon} color={c.color} logoUrl={c.logo_url} size={26} className="w-16 h-16" />
               <div className="mt-3 font-semibold text-brand-navy">{c.name}</div>
               <div className="text-xs text-muted-foreground">{c.jobs_count ?? 0} Jobs</div>
               <div className="mt-3 text-xs font-semibold text-brand-blue flex items-center gap-1">

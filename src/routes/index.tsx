@@ -131,7 +131,7 @@ function Index() {
               to="/jobs"
               className="bg-white border border-border rounded-2xl p-4 flex flex-col items-center text-center hover:border-brand-blue/40 hover:shadow-md transition"
             >
-              <CategoryIcon name={c.icon} color={c.color} size={26} className="w-14 h-14" />
+              <CategoryIcon name={c.icon} color={c.color} logoUrl={c.logo_url} size={26} className="w-14 h-14" />
               <div className="mt-3 font-semibold text-sm text-brand-navy">{c.name}</div>
               <div className="text-[11px] text-muted-foreground">{c.jobs_count ?? 0} Jobs</div>
             </Link>

@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { notifyTelegram } from "@/lib/telegram.functions";
 import { PhoneInput, buildFullPhone } from "@/components/PhoneInput";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
+import { StcLogo } from "@/components/StcLogo";
 import type { Job } from "@/lib/types";
 
 export const Route = createFileRoute("/jobs/$id/apply")({
@@ -445,16 +446,10 @@ function StepPersonal({ form, set }: { form: FormState; set: <K extends keyof Fo
           </div>
         </Field>
         <Field label="Nationality" required>
-          <select className={inputCls} value={form.nationality} onChange={(e) => set("nationality", e.target.value)}>
-            <option value="">Select Nationality</option>
-            {["Saudi","Pakistani","Indian","Bangladeshi","Filipino","Egyptian","Other"].map((n) => <option key={n}>{n}</option>)}
-          </select>
+          <input className={inputCls} placeholder="Enter your nationality" value={form.nationality} onChange={(e) => set("nationality", e.target.value)} />
         </Field>
         <Field label="Current Location" required>
-          <select className={inputCls} value={form.current_location} onChange={(e) => set("current_location", e.target.value)}>
-            <option value="">Select City</option>
-            {["Riyadh","Jeddah","Dammam","Mecca","Medina","Other"].map((n) => <option key={n}>{n}</option>)}
-          </select>
+          <input className={inputCls} placeholder="Enter your current city / location" value={form.current_location} onChange={(e) => set("current_location", e.target.value)} />
         </Field>
         <Field label="Marital Status">
           <select className={inputCls} value={form.marital_status} onChange={(e) => set("marital_status", e.target.value)}>
@@ -547,7 +542,7 @@ function StepPayment({ form, set, job }: { form: FormState; set: <K extends keyo
         <h3 className="font-bold text-brand-navy mb-3">Payment Method</h3>
         <div className="border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <span className="px-2 py-1 rounded bg-violet-600 text-white text-[10px] font-bold">stc</span>
+            <StcLogo className="h-7 w-[70px]" />
             <span className="font-semibold text-brand-navy text-sm">STC Recharge PIN</span>
           </div>
           <p className="text-xs text-muted-foreground mb-3">

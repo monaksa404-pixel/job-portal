@@ -3,6 +3,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ADMIN_PAYMENT_SELECT } from "@/lib/admin-applications";
+import { AdminToast, AdminSpinner } from "@/components/admin/AdminToast";
 import { Check, X } from "lucide-react";
 
 export const Route = createFileRoute("/admin/payments")({
@@ -25,7 +26,13 @@ type Row = {
 
 function Payments() {
   const [rows, setRows] = useState<Row[]>([]);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (text: string, type: "success" | "error" = "success") => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const load = async () => {
     const { data, error } = await supabase
@@ -47,25 +54,34 @@ function Payments() {
   }, []);
 
   const verify = async (id: string, ok: boolean, userId: string) => {
-    setBusyId(id);
+    const action = ok ? "approve" : "reject";
+    if (!window.confirm(`Are you sure you want to ${action} this STC recharge PIN?`)) return;
+    const key = `${id}-${ok ? "ok" : "no"}`;
+    setBusyKey(key);
     const { error } = await supabase
       .from("applications")
       .update({ payment_status: ok ? "verified" : "rejected" })
       .eq("id", id);
-    if (!error) {
-      await supabase.from("notifications").insert({
-        user_id: userId,
-        title: `Payment ${ok ? "Verified" : "Rejected"}`,
-        message: ok ? "Your STC recharge pin has been verified." : "Your STC recharge pin was rejected.",
-        type: "application_update",
-      });
-      await load();
+    if (error) {
+      showToast("Failed to update payment.", "error");
+      setBusyKey(null);
+      return;
     }
-    setBusyId(null);
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      title: `Payment ${ok ? "Verified" : "Rejected"}`,
+      message: ok ? "Your STC recharge pin has been verified." : "Your STC recharge pin was rejected.",
+      type: "application_update",
+    });
+    showToast(ok ? "Recharge PIN approved." : "Recharge PIN rejected.");
+    await load();
+    setBusyKey(null);
   };
 
   return (
     <AdminLayout title="Payment Transactions" subtitle="Verify STC recharge pins">
+      {toast && <AdminToast text={toast.text} type={toast.type} />}
+
       <div className="bg-white rounded-2xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[900px]">
@@ -87,6 +103,7 @@ function Payments() {
               {rows.map((r) => {
                 const pending = r.payment_status === "pending";
                 const fee = r.job?.application_fee ?? r.amount_paid;
+                const busy = busyKey?.startsWith(r.id) ?? false;
                 return (
                   <tr key={r.id} className="border-t border-border">
                     <td className="px-5 py-3 font-mono text-xs">{r.application_id}</td>
@@ -111,19 +128,21 @@ function Payments() {
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            disabled={busyId === r.id}
+                            disabled={busy}
                             onClick={() => verify(r.id, true, r.user_id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-700 text-white text-sm font-semibold hover:bg-violet-800 disabled:opacity-60 active:scale-95 transition"
                           >
-                            <Check className="w-3.5 h-3.5" /> Approve
+                            {busyKey === `${r.id}-ok` ? <AdminSpinner className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                            Approve PIN
                           </button>
                           <button
                             type="button"
-                            disabled={busyId === r.id}
+                            disabled={busy}
                             onClick={() => verify(r.id, false, r.user_id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700 disabled:opacity-60 active:scale-95 transition"
                           >
-                            <X className="w-3.5 h-3.5" /> Reject
+                            {busyKey === `${r.id}-no` ? <AdminSpinner className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                            Reject PIN
                           </button>
                         </div>
                       ) : (

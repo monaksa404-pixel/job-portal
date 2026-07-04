@@ -35,10 +35,18 @@ export const COLOR_STYLES: Record<string, { bg: string; text: string }> = {
 };
 
 export function CategoryIcon({
-  name, color = "blue", size = 22, className = "",
-}: { name: string; color?: string; size?: number; className?: string }) {
-  const Icon = ICONS[name] ?? Briefcase;
+  name, color = "blue", size = 22, className = "", logoUrl,
+}: { name: string; color?: string; size?: number; className?: string; logoUrl?: string | null }) {
   const c = COLOR_STYLES[color] ?? COLOR_STYLES.blue;
+  if (logoUrl) {
+    return (
+      <div className={`rounded-xl overflow-hidden flex items-center justify-center ${c.bg} ${className}`}>
+        <img src={logoUrl} alt="" className="w-full h-full object-contain p-2" />
+      </div>
+    );
+  }
+  const key = name.toLowerCase();
+  const Icon = ICONS[key] ?? Briefcase;
   return (
     <div className={`rounded-xl flex items-center justify-center ${c.bg} ${className}`}>
       <Icon size={size} className={c.text} strokeWidth={2.25} />

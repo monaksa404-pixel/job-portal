@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { ADMIN_APPLICATION_LIST_SELECT } from "@/lib/admin-applications";
+import { uploadAdminAttachment } from "@/lib/storage-url";
+import { AdminToast, AdminSpinner } from "@/components/admin/AdminToast";
 import { Eye, Check, X, MessageSquare, MoreHorizontal, Search, FileText, Filter, Send, Paperclip, Bold, Italic, Underline } from "lucide-react";
 
 export const Route = createFileRoute("/admin/applications")({
@@ -30,8 +32,16 @@ function AdminApplications() {
 
   const [selUser, setSelUser] = useState<{ id: string; name: string } | null>(null);
   const [msg, setMsg] = useState("");
+  const [attachFile, setAttachFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const showToast = (text: string, type: "success" | "error" = "success") => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const load = async () => {
     const { data, error } = await supabase
@@ -44,7 +54,6 @@ function AdminApplications() {
       return;
     }
     setRows((data ?? []) as unknown as App[]);
-    // stats
     const all = (data ?? []) as unknown as App[];
     setStat({
       total: all.length,
@@ -70,33 +79,82 @@ function AdminApplications() {
   ), [rows, q, jobId, status, jobs]);
 
   const setStatusFor = async (id: string, s: "accepted" | "rejected" | "shortlisted" | "under_review", userId: string, jobTitle?: string) => {
-    await supabase.from("applications").update({ application_status: s }).eq("id", id);
+    const label = s.replace("_", " ");
+    if (!window.confirm(`Mark this application as ${label}?`)) return;
+    const key = `${id}-app-${s}`;
+    setBusyKey(key);
+    const { error } = await supabase.from("applications").update({ application_status: s }).eq("id", id);
+    if (error) {
+      showToast("Failed to update application status.", "error");
+      setBusyKey(null);
+      return;
+    }
     await supabase.from("notifications").insert({
-      user_id: userId, title: `Application ${s.replace("_"," ")}`,
-      message: `Your application for ${jobTitle ?? "the job"} is now ${s.replace("_"," ")}.`, type: "application_update",
+      user_id: userId, title: `Application ${label}`,
+      message: `Your application for ${jobTitle ?? "the job"} is now ${label}.`, type: "application_update",
     });
-    load();
+    showToast(`Application ${label}.`);
+    await load();
+    setBusyKey(null);
   };
 
   const verifyPayment = async (id: string, ok: boolean, userId: string) => {
-    await supabase.from("applications").update({ payment_status: ok ? "verified" : "rejected" }).eq("id", id);
+    const action = ok ? "approve" : "reject";
+    if (!window.confirm(`Are you sure you want to ${action} this STC recharge PIN payment?`)) return;
+    const key = `${id}-pay-${ok ? "ok" : "no"}`;
+    setBusyKey(key);
+    const { error } = await supabase.from("applications").update({ payment_status: ok ? "verified" : "rejected" }).eq("id", id);
+    if (error) {
+      showToast("Failed to update payment status.", "error");
+      setBusyKey(null);
+      return;
+    }
     await supabase.from("notifications").insert({
       user_id: userId, title: `Payment ${ok ? "Verified" : "Rejected"}`,
       message: ok ? "Your STC recharge pin has been verified." : "Your STC recharge pin could not be verified.",
       type: "application_update",
     });
-    load();
+    showToast(ok ? "Payment approved." : "Payment rejected.");
+    await load();
+    setBusyKey(null);
   };
 
   const sendNotif = async () => {
     if (!selUser || !msg.trim()) return;
     setSending(true);
-    const { error } = await supabase.from("notifications").insert({
-      user_id: selUser.id, title: "Message from Admin", message: msg.trim(), type: "info",
-    });
-    await supabase.from("messages").insert({ user_id: selUser.id, title: "Message from Admin", message: msg.trim() });
+    let attachment_url: string | null = null;
+    let attachment_name: string | null = null;
+    try {
+      if (attachFile) {
+        const uploaded = await uploadAdminAttachment(selUser.id, attachFile);
+        attachment_url = uploaded.path;
+        attachment_name = uploaded.name;
+      }
+      const payload = {
+        user_id: selUser.id,
+        title: "Message from Admin",
+        message: msg.trim(),
+        type: "info" as const,
+        attachment_url,
+        attachment_name,
+      };
+      const { error } = await supabase.from("notifications").insert(payload);
+      if (error) throw error;
+      await supabase.from("messages").insert({
+        user_id: selUser.id,
+        title: "Message from Admin",
+        message: msg.trim(),
+        attachment_url,
+        attachment_name,
+      });
+      showToast("Notification sent.");
+      setMsg("");
+      setAttachFile(null);
+      if (fileRef.current) fileRef.current.value = "";
+    } catch {
+      showToast("Failed to send notification.", "error");
+    }
     setSending(false);
-    if (!error) { setSent("Notification sent."); setMsg(""); setTimeout(() => setSent(null), 2500); }
   };
 
   return (
@@ -106,7 +164,8 @@ function AdminApplications() {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, email, job title…" className="w-full pl-10 pr-3 py-2 rounded-lg border border-border text-sm" />
       </div>
     }>
-      {/* Stats */}
+      {toast && <AdminToast text={toast.text} type={toast.type} />}
+
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <StatBox icon={FileText} tint="bg-brand-blue/10 text-brand-blue" label="Total Applications" v={stat.total} />
         <StatBox icon={FileText} tint="bg-amber-100 text-amber-600" label="Under Review" v={stat.review} />
@@ -116,7 +175,6 @@ function AdminApplications() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4 mt-4">
-        {/* Table */}
         <div className="bg-white rounded-2xl border border-border overflow-hidden">
           <div className="p-4 flex flex-col md:flex-row gap-3">
             <div className="relative md:hidden flex-1">
@@ -171,11 +229,44 @@ function AdminApplications() {
                       <div className="text-[10px]">{new Date(a.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
                     </td>
                     <td className="px-3 py-3">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 flex-wrap">
                         <Link to="/admin/applications/$id" params={{ id: a.id }} className="p-1.5 rounded hover:bg-secondary" title="View"><Eye className="w-4 h-4 text-muted-foreground" /></Link>
-                        <button onClick={() => verifyPayment(a.id, true, a.user_id)} className="p-1.5 rounded hover:bg-emerald-50" title="Verify Payment"><Check className="w-4 h-4 text-emerald-600" /></button>
-                        <button onClick={() => setStatusFor(a.id, "accepted", a.user_id, a.job?.title)} className="p-1.5 rounded hover:bg-emerald-50" title="Accept"><Check className="w-4 h-4 text-emerald-600" /></button>
-                        <button onClick={() => setStatusFor(a.id, "rejected", a.user_id, a.job?.title)} className="p-1.5 rounded hover:bg-rose-50" title="Reject"><X className="w-4 h-4 text-rose-600" /></button>
+                        {a.payment_status === "pending" && (
+                          <>
+                            <ActionBtn
+                              busy={busyKey === `${a.id}-pay-ok`}
+                              onClick={() => verifyPayment(a.id, true, a.user_id)}
+                              className="bg-violet-600 text-white hover:bg-violet-700"
+                              title="Approve PIN"
+                            >
+                              {busyKey === `${a.id}-pay-ok` ? <AdminSpinner className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                            </ActionBtn>
+                            <ActionBtn
+                              busy={busyKey === `${a.id}-pay-no`}
+                              onClick={() => verifyPayment(a.id, false, a.user_id)}
+                              className="bg-orange-600 text-white hover:bg-orange-700"
+                              title="Reject PIN"
+                            >
+                              {busyKey === `${a.id}-pay-no` ? <AdminSpinner className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                            </ActionBtn>
+                          </>
+                        )}
+                        <ActionBtn
+                          busy={busyKey === `${a.id}-app-accepted`}
+                          onClick={() => setStatusFor(a.id, "accepted", a.user_id, a.job?.title)}
+                          className="bg-brand-blue text-white hover:opacity-90"
+                          title="Accept Application"
+                        >
+                          {busyKey === `${a.id}-app-accepted` ? <AdminSpinner className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                        </ActionBtn>
+                        <ActionBtn
+                          busy={busyKey === `${a.id}-app-rejected`}
+                          onClick={() => setStatusFor(a.id, "rejected", a.user_id, a.job?.title)}
+                          className="bg-rose-600 text-white hover:bg-rose-700"
+                          title="Reject Application"
+                        >
+                          {busyKey === `${a.id}-app-rejected` ? <AdminSpinner className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                        </ActionBtn>
                         <button onClick={() => setSelUser({ id: a.user_id, name: a.full_name })} className="p-1.5 rounded hover:bg-secondary" title="Send Notification"><MessageSquare className="w-4 h-4 text-brand-blue" /></button>
                         <button className="p-1.5 rounded hover:bg-secondary"><MoreHorizontal className="w-4 h-4 text-muted-foreground" /></button>
                       </div>
@@ -187,7 +278,6 @@ function AdminApplications() {
           </div>
         </div>
 
-        {/* Side panel — send notification */}
         <div className="bg-white rounded-2xl border border-border p-5 h-fit xl:sticky xl:top-20">
           <div className="font-bold text-brand-navy">Send Notifications</div>
           <div className="text-xs text-muted-foreground">Send custom notifications with optional files.</div>
@@ -207,20 +297,51 @@ function AdminApplications() {
           </div>
 
           <label className="text-xs font-bold mt-3 block">Attach Files <span className="text-muted-foreground font-normal">(Optional)</span></label>
-          <div className="mt-1 border-2 border-dashed border-border rounded-xl py-6 text-center text-xs text-muted-foreground">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+            className="hidden"
+            onChange={(e) => setAttachFile(e.target.files?.[0] ?? null)}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="mt-1 w-full border-2 border-dashed border-border rounded-xl py-6 text-center text-xs text-muted-foreground hover:bg-secondary/40 transition"
+          >
             <Paperclip className="w-5 h-5 mx-auto" />
-            <div className="mt-1 font-semibold text-brand-navy">Click to upload or drag and drop</div>
+            <div className="mt-1 font-semibold text-brand-navy">
+              {attachFile ? attachFile.name : "Click to upload or drag and drop"}
+            </div>
             <div>PDF, DOC, DOCX, PNG, JPG (Max 10MB)</div>
-          </div>
-
-          <button onClick={sendNotif} disabled={!selUser || !msg.trim() || sending} className="mt-4 w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg bg-brand-blue text-white text-sm font-semibold disabled:opacity-50">
-            <Send className="w-4 h-4" /> {sending ? "Sending…" : "Send Notification"}
           </button>
-          {sent && <div className="mt-2 text-xs text-emerald-600 text-center">{sent}</div>}
+
+          <button
+            onClick={sendNotif}
+            disabled={!selUser || !msg.trim() || sending}
+            className="mt-4 w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg bg-brand-blue text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition"
+          >
+            {sending ? <AdminSpinner className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+            {sending ? "Sending…" : "Send Notification"}
+          </button>
           <div className="mt-3 bg-secondary/60 rounded-lg px-3 py-2 text-xs text-muted-foreground">ⓘ The user will receive this message as a notification.</div>
         </div>
       </div>
     </AdminLayout>
+  );
+}
+
+function ActionBtn({ children, onClick, className, title, busy }: { children: React.ReactNode; onClick: () => void; className: string; title: string; busy?: boolean }) {
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onClick}
+      title={title}
+      className={`p-1.5 rounded inline-flex items-center justify-center active:scale-95 transition disabled:opacity-60 ${className}`}
+    >
+      {children}
+    </button>
   );
 }
 

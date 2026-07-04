@@ -4,6 +4,7 @@ export type Category = {
   slug: string;
   icon: string;
   color: string;
+  logo_url?: string | null;
   status: boolean;
   sort_order: number;
   jobs_count?: number;
@@ -71,8 +72,10 @@ export type Notification = {
   user_id: string;
   title: string;
   message: string;
-  type: "job_alert" | "application_update" | "system";
+  type: "job_alert" | "application_update" | "system" | "info";
   link: string | null;
+  attachment_url: string | null;
+  attachment_name: string | null;
   is_read: boolean;
   created_at: string;
 };

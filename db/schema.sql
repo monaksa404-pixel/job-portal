@@ -66,7 +66,10 @@ begin
   values (new.id, new.email,
     coalesce(new.raw_user_meta_data->>'full_name', ''),
     coalesce(new.raw_user_meta_data->>'phone', ''))
-  on conflict (id) do nothing;
+  on conflict (id) do update set
+    email = coalesce(excluded.email, public.profiles.email),
+    full_name = coalesce(nullif(excluded.full_name, ''), public.profiles.full_name),
+    updated_at = now();
   insert into public.user_roles (user_id, role) values (new.id, 'user')
   on conflict do nothing;
   return new;
@@ -458,3 +461,25 @@ do $$ begin alter publication supabase_realtime add table public.companies;  exc
 do $$ begin alter publication supabase_realtime add table public.support_tickets; exception when others then null; end $$;
 
 alter table public.jobs alter column salary set default 0;
+
+alter table public.messages add column if not exists attachment_url text;
+alter table public.messages add column if not exists attachment_name text;
+alter table public.notifications add column if not exists attachment_url text;
+alter table public.notifications add column if not exists attachment_name text;
+
+do $$ begin
+  create policy "Docs admin read" on storage.objects for select to authenticated
+    using (bucket_id = 'documents' and public.has_role(auth.uid(), 'admin'));
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "Docs admin upload" on storage.objects for insert to authenticated
+    with check (bucket_id = 'documents' and public.has_role(auth.uid(), 'admin'));
+exception when duplicate_object then null; end $$;
+
+update public.profiles p
+set email = u.email, updated_at = now()
+from auth.users u
+where p.id = u.id and (p.email is null or p.email = '') and u.email is not null;
+
+alter table public.categories add column if not exists logo_url text;

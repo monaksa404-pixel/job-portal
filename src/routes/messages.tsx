@@ -4,13 +4,14 @@ import { MessageSquare } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { AttachmentLink } from "@/components/AttachmentLink";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({ meta: [{ title: "Messages — Job Expert" }] }),
   component: () => <DashboardLayout><MessagesPage /></DashboardLayout>,
 });
 
-type Msg = { id: string; user_id: string; title: string | null; message: string; is_read: boolean; created_at: string };
+type Msg = { id: string; user_id: string; title: string | null; message: string; is_read: boolean; created_at: string; attachment_url?: string | null; attachment_name?: string | null };
 
 function MessagesPage() {
   const { user } = useAuth();
@@ -49,6 +50,7 @@ function MessagesPage() {
               <span className="text-[11px] text-muted-foreground">{new Date(m.created_at).toLocaleString()}</span>
             </div>
             <p className="text-sm text-foreground/80 mt-1 whitespace-pre-line">{m.message}</p>
+            {m.attachment_url && <AttachmentLink path={m.attachment_url} name={m.attachment_name} />}
           </div>
         ))}
         <Link to="/help" className="inline-block text-sm font-semibold text-brand-blue">Need to reply? Open a support ticket →</Link>

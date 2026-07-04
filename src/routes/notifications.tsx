@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatRelative } from "@/lib/queries";
 import type { Notification, NotificationPrefs } from "@/lib/types";
+import { AttachmentLink } from "@/components/AttachmentLink";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({ meta: [{ title: "Notifications — Job Expert" }] }),
@@ -156,6 +157,7 @@ function NotifRow({ n, onRead }: { n: Notification; onRead: (id: string) => void
         </div>
         <div className="mt-1 font-semibold text-brand-navy text-sm">{n.title}</div>
         <p className="text-xs text-foreground/70 mt-0.5">{n.message}</p>
+        {n.attachment_url && <AttachmentLink path={n.attachment_url} name={n.attachment_name} />}
       </div>
       {!n.is_read && <div className="w-2 h-2 rounded-full bg-brand-blue mt-2" />}
     </div>
