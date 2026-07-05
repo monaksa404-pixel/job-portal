@@ -10,6 +10,7 @@ import { ShareJobButtons } from "@/components/ShareJobButtons";
 import { JobInfoGrid } from "@/components/JobInfoGrid";
 import { JobSalaryDisplay } from "@/components/JobSalaryDisplay";
 import { fetchJobById, formatRelative } from "@/lib/queries";
+import { salaryRangeLabel, readSalaryMax } from "@/lib/job-salary";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
 import { useAuth } from "@/hooks/use-auth";
 import { isJobSaved, toggleSaveJob } from "@/lib/saved";
@@ -32,7 +33,12 @@ function JobDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [saved, setSaved] = useState(false);
-  const q = useQuery({ queryKey: ["job", id], queryFn: () => fetchJobById(id), staleTime: 0 });
+  const q = useQuery({
+    queryKey: ["job", id],
+    queryFn: () => fetchJobById(id),
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
   const job = q.data;
 
   useEffect(() => {
@@ -152,6 +158,7 @@ function JobDetailPage() {
             <dl className="divide-y divide-border text-sm">
               <Row label="Category" value={job.category?.name ?? "—"} />
               <Row label="Location" value={job.location} />
+              <Row label="Salary" value={`${salaryRangeLabel(job.salary, readSalaryMax(job), job.salary_currency)} / ${job.salary_period}`} />
               <Row label="Experience Required" value={job.experience_required} />
               <Row label="Duty Timing" value={job.duty_timing} />
             </dl>

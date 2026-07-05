@@ -6,7 +6,7 @@ export function JobSalaryDisplay({
   job,
   size = "md",
 }: {
-  job: Pick<Job, "salary" | "salary_max" | "salary_currency" | "salary_period" | "responsibilities">;
+  job: Pick<Job, "salary" | "salary_max" | "salary_currency" | "salary_period" | "responsibilities" | "description">;
   size?: "sm" | "md" | "lg";
 }) {
   const max = readSalaryMax(job);

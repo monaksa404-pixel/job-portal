@@ -1,23 +1,59 @@
 import type { Job } from "./types";
 
 const SALARY_MAX_META = "__salary_max:";
+const DESC_SALARY_RE = /<!--\s*salary_max:([\d.]+)\s*-->/;
+
+function pickUrl(...vals: (string | null | undefined)[]): string | null {
+  for (const v of vals) {
+    const s = v?.trim();
+    if (s) return s;
+  }
+  return null;
+}
 
 export function readSalaryMax(job: {
+  salary?: number;
   salary_max?: number | null;
   responsibilities?: string[] | null;
+  description?: string | null;
 }): number | null {
   const col = job.salary_max;
-  if (col != null && Number(col) > 0) return Number(col);
+  if (col != null && Number(col) > 0) {
+    const n = Number(col);
+    if (job.salary != null && n > job.salary) return n;
+    if (job.salary == null) return n;
+  }
+
   const tag = (job.responsibilities ?? []).find((r) => r.startsWith(SALARY_MAX_META));
-  if (!tag) return null;
-  const n = parseFloat(tag.slice(SALARY_MAX_META.length));
-  return Number.isFinite(n) && n > 0 ? n : null;
+  if (tag) {
+    const n = parseFloat(tag.slice(SALARY_MAX_META.length));
+    if (Number.isFinite(n) && n > 0 && (job.salary == null || n > job.salary)) return n;
+  }
+
+  const desc = job.description ?? "";
+  const m = desc.match(DESC_SALARY_RE);
+  if (m) {
+    const n = parseFloat(m[1]);
+    if (Number.isFinite(n) && n > 0 && (job.salary == null || n > job.salary)) return n;
+  }
+
+  return null;
+}
+
+export function stripSalaryFromDescription(description: string): string {
+  return description.replace(DESC_SALARY_RE, "").trimEnd();
 }
 
 export function packSalaryMeta(responsibilities: string[] | null | undefined, salaryMax: number | null): string[] {
   const kept = (responsibilities ?? []).filter((r) => !r.startsWith(SALARY_MAX_META));
   if (salaryMax != null && salaryMax > 0) kept.push(`${SALARY_MAX_META}${salaryMax}`);
   return kept;
+}
+
+export function packDescriptionSalary(description: string, salaryMax: number | null): string {
+  const clean = stripSalaryFromDescription(description);
+  if (salaryMax != null && salaryMax > 0) return `${clean}<!--salary_max:${salaryMax}-->`;
+  return clean;
 }
 
 export function visibleResponsibilities(responsibilities: string[] | null | undefined): string[] {
@@ -29,6 +65,7 @@ export function normalizeJob<T extends Job>(job: T): T {
   return {
     ...job,
     salary_max,
+    description: stripSalaryFromDescription(job.description ?? ""),
     responsibilities: visibleResponsibilities(job.responsibilities),
   };
 }
@@ -41,4 +78,29 @@ export function salaryRangeLabel(
   const max = salaryMax != null && salaryMax > salary ? salaryMax : null;
   if (max) return `${salary.toLocaleString()} – ${max.toLocaleString()} ${currency}`;
   return `${salary.toLocaleString()} ${currency}`;
+}
+
+export function getJobCompanyInfo(job: Job): {
+  name: string;
+  logoUrl: string | null;
+  website: string | null;
+  verified: boolean;
+} {
+  const company = job.company ?? null;
+  const added = job.added_companies ?? [];
+  const byId = job.company_id ? added.find((c) => c.id === job.company_id) : null;
+  const byName = added.find((c) => c.name.toLowerCase() === (job.company_name ?? "").toLowerCase());
+
+  const jobName = job.company_name?.trim();
+  const name =
+    jobName && jobName !== "Job Expert"
+      ? jobName
+      : company?.name ?? byId?.name ?? byName?.name ?? jobName ?? "Company";
+
+  return {
+    name,
+    logoUrl: pickUrl(job.company_logo_url, company?.logo_url, byId?.logo_url, byName?.logo_url),
+    website: pickUrl(job.company_website, company?.website, byId?.website, byName?.website),
+    verified: company?.verified ?? job.verified,
+  };
 }

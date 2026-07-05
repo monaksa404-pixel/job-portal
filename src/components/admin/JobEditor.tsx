@@ -5,7 +5,7 @@ import { AmountInput } from "@/components/AmountInput";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, MapPin, Building2, Upload, Plus, ChevronDown } from "lucide-react";
 import { parseSalaryAmount, resolveJobSalary } from "@/lib/utils";
-import { readSalaryMax, packSalaryMeta, salaryRangeLabel } from "@/lib/job-salary";
+import { readSalaryMax, packSalaryMeta, packDescriptionSalary, salaryRangeLabel, stripSalaryFromDescription } from "@/lib/job-salary";
 
 type Category = { id: string; name: string };
 type Company = { id: string; name: string; logo_url: string | null; website: string | null; verified: boolean };
@@ -89,23 +89,22 @@ export function JobEditor({ jobId }: { jobId?: string }) {
           return;
         }
         const j = data as unknown as DbJob;
-        const maxSalary = readSalaryMax(j);
-        let editFields = { edit_co_name: "", edit_co_logo: "", edit_co_website: "" };
+        const maxSalary = readSalaryMax({ ...j, salary: j.salary });
+        const jobBrandName = j.company_name && j.company_name !== "Job Expert" ? j.company_name : "";
+        let editFields = {
+          edit_co_name: jobBrandName,
+          edit_co_logo: j.company_logo_url ?? "",
+          edit_co_website: j.company_website ?? "",
+        };
         if (j.company_id) {
           const { data: coRow } = await supabase.from("companies").select("name, logo_url, website").eq("id", j.company_id).maybeSingle();
           if (coRow) {
             editFields = {
-              edit_co_name: coRow.name ?? "",
-              edit_co_logo: coRow.logo_url ?? "",
-              edit_co_website: coRow.website ?? "",
+              edit_co_name: jobBrandName || coRow.name || "",
+              edit_co_logo: j.company_logo_url || coRow.logo_url || "",
+              edit_co_website: j.company_website || coRow.website || "",
             };
           }
-        } else if (j.company_name && j.company_name !== "Job Expert") {
-          editFields = {
-            edit_co_name: j.company_name,
-            edit_co_logo: j.company_logo_url ?? "",
-            edit_co_website: j.company_website ?? "",
-          };
         }
         setF({
           title: j.title ?? "",
@@ -116,7 +115,7 @@ export function JobEditor({ jobId }: { jobId?: string }) {
           salary_min: j.salary ? String(j.salary) : "",
           salary_max: maxSalary ? String(maxSalary) : "",
           salary_disclosed: true,
-          description: j.description ?? "",
+          description: stripSalaryFromDescription(j.description ?? ""),
           posted_by: j.posted_by === "company" ? "company" : "admin",
           company_id: j.company_id ?? "",
           ...editFields,
@@ -199,10 +198,10 @@ export function JobEditor({ jobId }: { jobId?: string }) {
     const brandingName = f.edit_co_name.trim();
     const brandingLogo = f.edit_co_logo.trim() || null;
     const brandingWebsite = f.edit_co_website.trim() || null;
-    const useCompany = !!f.company_id;
-    const companyName = brandingName || selectedCo?.name || (useCompany ? "Company" : "Job Expert");
+    const companyName = brandingName || selectedCo?.name || "Job Expert";
     const companyLogo = brandingLogo ?? selectedCo?.logo_url ?? null;
     const companyWebsite = brandingWebsite ?? selectedCo?.website ?? null;
+    const useCompany = !!f.company_id || !!brandingName;
     const { salary, salary_max } = resolveJobSalary(f.salary_min, f.salary_max, f.application_fee);
     const applicationFee = parseSalaryAmount(f.application_fee) || (f.fee_enabled ? 50 : 0);
     const rating = Math.min(5, Math.max(1, Number(f.rating) || 4.5));
@@ -293,26 +292,24 @@ export function JobEditor({ jobId }: { jobId?: string }) {
 
     const savePayload = {
       ...payload,
+      description: packDescriptionSalary(payload.description, payload.salary_max),
       responsibilities: packSalaryMeta(currentResp, payload.salary_max),
     };
 
-    if (isEdit && jobId) {
-      let { error } = await supabase.from("jobs").update(savePayload).eq("id", jobId);
-      if (error?.message?.toLowerCase().includes("salary_max")) {
-        const { salary_max: _drop, ...withoutMax } = savePayload;
-        ({ error } = await supabase.from("jobs").update(withoutMax).eq("id", jobId));
+    const trySave = async (row: typeof savePayload & { status?: "active" }) => {
+      if (isEdit && jobId) {
+        return supabase.from("jobs").update(row).eq("id", jobId);
       }
-      setBusy(false);
-      if (error) { setErr(error.message); return; }
-    } else {
-      let { error } = await supabase.from("jobs").insert({ ...savePayload, status: "active" as const });
-      if (error?.message?.toLowerCase().includes("salary_max")) {
-        const { salary_max: _drop, ...withoutMax } = savePayload;
-        ({ error } = await supabase.from("jobs").insert({ ...withoutMax, status: "active" as const }));
-      }
-      setBusy(false);
-      if (error) { setErr(error.message); return; }
+      return supabase.from("jobs").insert({ ...row, status: "active" as const });
+    };
+
+    let { error } = await trySave(savePayload);
+    if (error?.message?.toLowerCase().includes("salary_max")) {
+      const { salary_max: _drop, ...withoutMax } = savePayload;
+      ({ error } = await trySave(withoutMax));
     }
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
     nav({ to: "/admin/jobs" });
   };
 
@@ -436,31 +433,34 @@ export function JobEditor({ jobId }: { jobId?: string }) {
               </div>
 
               <div className="lg:col-span-2 border-t border-border pt-4">
-                <div className="text-sm font-bold text-brand-navy mb-3">Company for this Job</div>
-                <Field label="Select Company">
-                  <select value={f.company_id} onChange={(e) => pickCompany(e.target.value)} className="inp">
-                    <option value="">No company (Job Expert)</option>
-                    {cos.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </Field>
-
-                <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 bg-secondary/30 rounded-xl p-4">
+                <div className="text-sm font-bold text-brand-navy mb-3">Company Branding on Job Listing</div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 bg-secondary/30 rounded-xl p-4">
                   <Field label="Company Name">
-                    <input value={f.edit_co_name} onChange={(e) => setF({ ...f, edit_co_name: e.target.value })} placeholder="Company name on job listing" className="inp" />
+                    <input value={f.edit_co_name} onChange={(e) => setF({ ...f, edit_co_name: e.target.value })} placeholder="e.g. Saudi German Hospital" className="inp" />
                   </Field>
                   <Field label="Company Website">
-                    <input value={f.edit_co_website} onChange={(e) => setF({ ...f, edit_co_website: e.target.value })} placeholder="https://" className="inp" />
+                    <input value={f.edit_co_website} onChange={(e) => setF({ ...f, edit_co_website: e.target.value })} placeholder="https://www.example.com" className="inp" />
                   </Field>
                   <Field label="Company Logo">
                     <div className="flex items-center gap-3">
                       {f.edit_co_logo ? <img src={f.edit_co_logo} alt="" className="w-16 h-16 rounded-xl object-cover border border-border" /> : <div className="w-16 h-16 rounded-xl bg-white border border-border flex items-center justify-center"><Building2 className="w-5 h-5 text-muted-foreground" /></div>}
                       <label className="cursor-pointer px-3 py-2 rounded-lg border border-border text-sm hover:bg-white">
-                        {uploading ? "Uploading…" : "Change Logo"}
+                        {uploading ? "Uploading…" : "Upload Logo"}
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0], "edit")} />
                       </label>
                     </div>
                   </Field>
                 </div>
+              </div>
+
+              <div className="lg:col-span-2 border-t border-border pt-4">
+                <div className="text-sm font-bold text-brand-navy mb-3">Link to Company Record (optional)</div>
+                <Field label="Select Company">
+                  <select value={f.company_id} onChange={(e) => pickCompany(e.target.value)} className="inp">
+                    <option value="">No linked company</option>
+                    {cos.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </Field>
 
                 <div className="mt-5">
                   <div className="text-sm font-bold text-brand-navy mb-3">Add New Company</div>
