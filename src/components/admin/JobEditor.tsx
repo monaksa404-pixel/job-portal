@@ -275,12 +275,12 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       return;
     }
 
-    if (companyId) {
+    if (payload.company_id) {
       const { error: coErr } = await supabase.from("companies").update({
         name: payload.company_name,
         logo_url: payload.company_logo_url,
         website: payload.company_website,
-      }).eq("id", companyId);
+      }).eq("id", payload.company_id);
       if (coErr) {
         setErr(coErr.message);
         setBusy(false);
