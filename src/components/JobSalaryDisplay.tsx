@@ -5,10 +5,13 @@ export function JobSalaryDisplay({
   job,
   size = "md",
 }: {
-  job: Pick<Job, "salary" | "salary_max" | "salary_currency" | "salary_period" | "description" | "responsibilities">;
+  job: Pick<Job, "salary" | "salary_max" | "salary_currency" | "salary_period" | "description" | "responsibilities" | "added_companies">;
   size?: "sm" | "md" | "lg";
 }) {
-  const max = getJobSalaryMax(job);
+  const max =
+    job.salary_max != null && Number(job.salary_max) > Number(job.salary)
+      ? Number(job.salary_max)
+      : getJobSalaryMax(job);
   const hasRange = max != null && max > Number(job.salary);
   const sizeClass =
     size === "lg" ? "text-lg lg:text-xl" : size === "sm" ? "text-sm" : "text-base lg:text-lg";

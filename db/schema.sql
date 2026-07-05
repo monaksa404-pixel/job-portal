@@ -589,6 +589,17 @@ update public.jobs set responsibilities = coalesce(
   '{}'::text[]
 );
 
+update public.jobs
+set added_companies = jsonb_set(
+  coalesce(added_companies, '[]'::jsonb),
+  '{0,salary_max}',
+  to_jsonb(salary_max)
+)
+where salary_max is not null
+  and salary_max > salary
+  and jsonb_array_length(coalesce(added_companies, '[]'::jsonb)) > 0
+  and (added_companies->0->>'salary_max') is null;
+
 -- Admin read user_documents -------------------------------------------
 do $$ begin
   create policy "User documents admin all" on public.user_documents for all to authenticated

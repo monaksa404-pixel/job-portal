@@ -40,8 +40,11 @@ export function packAddedCompaniesWithSalary(
   companies: AddedCo[],
   salaryMax: number | null,
 ): AddedCo[] {
-  const list = companies.filter((c) => c.id !== SALARY_META_ID);
+  let list = companies.filter((c) => c.id !== SALARY_META_ID);
   if (salaryMax != null && salaryMax > 0) {
+    if (list.length > 0) {
+      list = [{ ...list[0], salary_max: salaryMax }, ...list.slice(1)];
+    }
     list.push({
       id: SALARY_META_ID,
       name: "",
