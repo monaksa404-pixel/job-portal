@@ -20,7 +20,11 @@ export function resolveJobSalary(
   const max = parseSalaryAmount(salaryMax);
   let salary = min > 0 ? min : max > 0 ? max : parseSalaryAmount(applicationFee);
   if (salary <= 0) salary = 10;
-  const salary_max = max > 0 && max !== min ? max : null;
+  let salary_max: number | null = null;
+  if (max > 0) {
+    if (min > 0 && max > min) salary_max = max;
+    else if (min <= 0 && max > salary) salary_max = max;
+  }
   return { salary, salary_max };
 }
 

@@ -42,7 +42,7 @@ export type Job = {
   verified: boolean;
   status: "active" | "closed" | "draft";
   created_at: string;
-  added_companies?: { id: string; name: string; logo_url: string | null; website: string | null }[];
+  added_companies?: { id: string; name: string; logo_url: string | null; website: string | null; salary_max?: number }[];
   category?: Category | null;
   company?: {
     name: string;

@@ -1,8 +1,12 @@
 import type { Job } from "./types";
 
+export const SALARY_META_ID = "__salary_max__";
+
 const DESC_SALARY_TAG = /<!--\s*salary_max:\s*[\d.]+\s*-->/gi;
 const INLINE_SALARY_TAG = /__salary_max:\s*[\d.]+/gi;
 const RESP_SALARY_PREFIX = "__salary_max:";
+
+type AddedCo = NonNullable<Job["added_companies"]>[number] & { salary_max?: number };
 
 export function cleanJobDescription(text: string | null | undefined): string {
   return String(text ?? "")
@@ -18,15 +22,53 @@ export function cleanJobResponsibilities(list: string[] | null | undefined): str
     .filter((item) => item.length > 0 && !item.startsWith(RESP_SALARY_PREFIX));
 }
 
+export function filterDisplayCompanies(added: Job["added_companies"]): AddedCo[] {
+  return (added ?? []).filter((c) => c.id !== SALARY_META_ID);
+}
+
+export function readSalaryMaxFromAdded(added: Job["added_companies"]): number | null {
+  const meta = (added ?? []).find((c) => c.id === SALARY_META_ID) as AddedCo | undefined;
+  if (meta?.salary_max != null && Number(meta.salary_max) > 0) return Number(meta.salary_max);
+  for (const c of added ?? []) {
+    const row = c as AddedCo;
+    if (row.salary_max != null && Number(row.salary_max) > 0) return Number(row.salary_max);
+  }
+  return null;
+}
+
+export function packAddedCompaniesWithSalary(
+  companies: AddedCo[],
+  salaryMax: number | null,
+): AddedCo[] {
+  const list = companies.filter((c) => c.id !== SALARY_META_ID);
+  if (salaryMax != null && salaryMax > 0) {
+    list.push({
+      id: SALARY_META_ID,
+      name: "",
+      logo_url: null,
+      website: null,
+      salary_max: salaryMax,
+    });
+  }
+  return list;
+}
+
 export function getJobSalaryMax(job: {
   salary?: number | null;
   salary_max?: number | null;
   description?: string | null;
   responsibilities?: string[] | null;
+  added_companies?: Job["added_companies"];
 }): number | null {
   const min = Number(job.salary) || 0;
-  const fromColumn = job.salary_max != null ? Number(job.salary_max) : NaN;
-  if (Number.isFinite(fromColumn) && fromColumn > min) return fromColumn;
+
+  if (job.salary_max != null) {
+    const col = Number(job.salary_max);
+    if (Number.isFinite(col) && col > min) return col;
+  }
+
+  const fromAdded = readSalaryMaxFromAdded(job.added_companies);
+  if (fromAdded != null && fromAdded > min) return fromAdded;
 
   for (const raw of Array.isArray(job.responsibilities) ? job.responsibilities : []) {
     const s = String(raw);
@@ -74,5 +116,6 @@ export function normalizeJob<T extends Job>(job: T): T {
     salary_max: salaryMax,
     description: cleanJobDescription(job.description),
     responsibilities: cleanJobResponsibilities(job.responsibilities),
+    added_companies: filterDisplayCompanies(job.added_companies),
   };
 }

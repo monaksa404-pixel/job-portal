@@ -5,7 +5,7 @@ import { AmountInput } from "@/components/AmountInput";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, MapPin, Building2, Upload, Plus, ChevronDown } from "lucide-react";
 import { parseSalaryAmount, resolveJobSalary } from "@/lib/utils";
-import { getJobSalaryMax, formatJobSalaryRange, cleanJobDescription, cleanJobResponsibilities } from "@/lib/job-salary";
+import { getJobSalaryMax, formatJobSalaryRange, cleanJobDescription, cleanJobResponsibilities, packAddedCompaniesWithSalary, readSalaryMaxFromAdded } from "@/lib/job-salary";
 
 type Category = { id: string; name: string };
 type Company = { id: string; name: string; logo_url: string | null; website: string | null; verified: boolean };
@@ -89,7 +89,10 @@ export function JobEditor({ jobId }: { jobId?: string }) {
           return;
         }
         const j = data as unknown as DbJob;
-        const maxSalary = getJobSalaryMax({ ...j, salary: j.salary });
+        const maxSalary =
+          j.salary_max != null && Number(j.salary_max) > 0
+            ? Number(j.salary_max)
+            : readSalaryMaxFromAdded(j.added_companies) ?? getJobSalaryMax({ ...j, salary: j.salary });
         const jobBrandName = j.company_name && j.company_name !== "Job Expert" ? j.company_name : "";
         let editFields = {
           edit_co_name: jobBrandName,
@@ -212,17 +215,20 @@ export function JobEditor({ jobId }: { jobId?: string }) {
     const rating = Math.min(5, Math.max(1, Number(f.rating) || 4.5));
     const reviewsCount = Math.max(0, Math.floor(Number(f.reviews_count) || 0));
     const selectedCompany = selectedCo;
-    const syncedCompanies = companyId && selectedCompany
-      ? [{ id: selectedCompany.id, name: companyName, logo_url: companyLogo, website: companyWebsite }]
-      : f.added_companies.length
-        ? f.added_companies.map((c) =>
-            c.id === companyId
-              ? { ...c, name: companyName, logo_url: companyLogo, website: companyWebsite }
-              : c,
-          )
-        : brandingName
-          ? [{ id: companyId ?? "branding", name: companyName, logo_url: companyLogo, website: companyWebsite }]
-          : f.added_companies;
+    const syncedCompanies = packAddedCompaniesWithSalary(
+      companyId && selectedCompany
+        ? [{ id: selectedCompany.id, name: companyName, logo_url: companyLogo, website: companyWebsite }]
+        : f.added_companies.length
+          ? f.added_companies.map((c) =>
+              c.id === companyId
+                ? { ...c, name: companyName, logo_url: companyLogo, website: companyWebsite }
+                : c,
+            )
+          : brandingName
+            ? [{ id: companyId ?? "branding", name: companyName, logo_url: companyLogo, website: companyWebsite }]
+            : [],
+      salary_max,
+    );
 
     return {
       title: f.title.trim(),
@@ -303,12 +309,16 @@ export function JobEditor({ jobId }: { jobId?: string }) {
 
     const trySave = async (row: typeof savePayload & { status?: "active" }) => {
       if (isEdit && jobId) {
-        return supabase.from("jobs").update(row).eq("id", jobId);
+        return supabase.from("jobs").update(row).eq("id", jobId).select("id").maybeSingle();
       }
-      return supabase.from("jobs").insert({ ...row, status: "active" as const });
+      return supabase.from("jobs").insert({ ...row, status: "active" as const }).select("id").single();
     };
 
-    const { error } = await trySave(savePayload);
+    const { data: saved, error } = await trySave(savePayload);
+    const savedId = isEdit ? jobId : (saved as { id: string } | null)?.id;
+    if (!error && payload.salary_max != null && savedId) {
+      await supabase.from("jobs").update({ salary_max: payload.salary_max }).eq("id", savedId);
+    }
     setBusy(false);
     if (error) {
       if (error.message.toLowerCase().includes("salary_max")) {

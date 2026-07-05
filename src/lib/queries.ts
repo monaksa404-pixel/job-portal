@@ -2,6 +2,18 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Category, Job } from "./types";
 import { normalizeJob } from "./job-salary";
 
+const JOB_SELECT = `
+  id, title, company_name, company_logo_url, company_website, company_id,
+  category_id, salary, salary_max, salary_currency, salary_period,
+  location, job_type, work_mode, duty_timing, experience_required,
+  male_required, female_required, accommodation, food, transport,
+  medical_insurance, overtime, application_fee, description, responsibilities,
+  rating, reviews_count, verified, status, created_at, posted_by,
+  employment_type, added_companies,
+  category:categories(*),
+  company:companies(name, logo_url, website, verified)
+`;
+
 export async function fetchCategories(): Promise<Category[]> {
   const { data, error } = await supabase
     .from("categories")
@@ -29,7 +41,7 @@ export async function fetchCategoriesWithCounts(): Promise<Category[]> {
 export async function fetchRecentJobs(limit = 6): Promise<Job[]> {
   const { data, error } = await supabase
     .from("jobs")
-    .select("*, category:categories(*), company:companies(name, logo_url, website, verified)")
+    .select(JOB_SELECT)
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -40,7 +52,7 @@ export async function fetchRecentJobs(limit = 6): Promise<Job[]> {
 export async function fetchAllJobs(): Promise<Job[]> {
   const { data, error } = await supabase
     .from("jobs")
-    .select("*, category:categories(*), company:companies(name, logo_url, website, verified)")
+    .select(JOB_SELECT)
     .eq("status", "active")
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -50,7 +62,7 @@ export async function fetchAllJobs(): Promise<Job[]> {
 export async function fetchJobById(id: string): Promise<Job | null> {
   const { data, error } = await supabase
     .from("jobs")
-    .select("*, category:categories(*), company:companies(name, logo_url, website, verified)")
+    .select(JOB_SELECT)
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;

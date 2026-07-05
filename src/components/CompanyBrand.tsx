@@ -1,4 +1,5 @@
 import type { Job } from "@/lib/types";
+import { filterDisplayCompanies } from "@/lib/job-salary";
 import blueTick from "@/images/blue-tick.png";
 
 export type CompanyInfo = {
@@ -18,7 +19,7 @@ function pickUrl(...vals: (string | null | undefined)[]): string | null {
 
 export function getJobCompanyInfo(job: Job): CompanyInfo {
   const company = job.company ?? null;
-  const added = job.added_companies ?? [];
+  const added = filterDisplayCompanies(job.added_companies);
   const byId = job.company_id ? added.find((c) => c.id === job.company_id) : null;
   const branded = added.find((c) => c.name?.trim() && !["Company", "Job Expert"].includes(c.name.trim()));
 
