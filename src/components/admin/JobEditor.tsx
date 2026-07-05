@@ -160,6 +160,10 @@ export function JobEditor({ jobId }: { jobId?: string }) {
   };
 
   const pickCompany = (companyId: string) => {
+    if (!companyId) {
+      setF((p) => ({ ...p, company_id: "" }));
+      return;
+    }
     const co = cos.find((c) => c.id === companyId);
     setF((p) => ({
       ...p,
@@ -194,29 +198,30 @@ export function JobEditor({ jobId }: { jobId?: string }) {
   };
 
   const buildPayload = () => {
-    const selectedCo = f.company_id ? cos.find((c) => c.id === f.company_id) : null;
+    const companyId = f.company_id.trim() || null;
+    const selectedCo = companyId ? cos.find((c) => c.id === companyId) : null;
     const brandingName = f.edit_co_name.trim();
     const brandingLogo = f.edit_co_logo.trim() || null;
     const brandingWebsite = f.edit_co_website.trim() || null;
     const companyName = brandingName || selectedCo?.name || "Job Expert";
     const companyLogo = brandingLogo ?? selectedCo?.logo_url ?? null;
     const companyWebsite = brandingWebsite ?? selectedCo?.website ?? null;
-    const useCompany = !!f.company_id || !!brandingName;
+    const useCompany = !!companyId || !!brandingName;
     const { salary, salary_max } = resolveJobSalary(f.salary_min, f.salary_max, f.application_fee);
     const applicationFee = parseSalaryAmount(f.application_fee) || (f.fee_enabled ? 50 : 0);
     const rating = Math.min(5, Math.max(1, Number(f.rating) || 4.5));
     const reviewsCount = Math.max(0, Math.floor(Number(f.reviews_count) || 0));
     const selectedCompany = selectedCo;
-    const syncedCompanies = useCompany && selectedCompany
+    const syncedCompanies = companyId && selectedCompany
       ? [{ id: selectedCompany.id, name: companyName, logo_url: companyLogo, website: companyWebsite }]
       : f.added_companies.length
         ? f.added_companies.map((c) =>
-            c.id === f.company_id
+            c.id === companyId
               ? { ...c, name: companyName, logo_url: companyLogo, website: companyWebsite }
               : c,
           )
         : brandingName
-          ? [{ id: f.company_id || "local", name: companyName, logo_url: companyLogo, website: companyWebsite }]
+          ? [{ id: companyId ?? "branding", name: companyName, logo_url: companyLogo, website: companyWebsite }]
           : f.added_companies;
 
     return {
@@ -235,7 +240,7 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       reviews_count: reviewsCount,
       verified: useCompany ? (selectedCompany?.verified ?? true) : true,
       posted_by: useCompany || brandingName ? "company" : f.posted_by,
-      company_id: useCompany ? f.company_id : null,
+      company_id: companyId,
       added_companies: syncedCompanies,
       male_required: f.male_required,
       female_required: f.female_required,
@@ -270,12 +275,12 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       return;
     }
 
-    if (f.company_id) {
+    if (companyId) {
       const { error: coErr } = await supabase.from("companies").update({
         name: payload.company_name,
         logo_url: payload.company_logo_url,
         website: payload.company_website,
-      }).eq("id", f.company_id);
+      }).eq("id", companyId);
       if (coErr) {
         setErr(coErr.message);
         setBusy(false);
