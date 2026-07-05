@@ -1,6 +1,5 @@
 import type { Job } from "@/lib/types";
-import { readSalaryMax } from "@/lib/job-salary";
-import { formatSalaryRange } from "@/lib/utils";
+import { jobDisplayFields } from "@/lib/job-salary";
 
 export function JobSalaryDisplay({
   job,
@@ -9,7 +8,7 @@ export function JobSalaryDisplay({
   job: Pick<Job, "salary" | "salary_max" | "salary_currency" | "salary_period" | "responsibilities" | "description">;
   size?: "sm" | "md" | "lg";
 }) {
-  const max = readSalaryMax(job);
+  const { salary_max: max } = jobDisplayFields(job as Job);
   const hasRange = max != null && max > job.salary;
   const sizeClass =
     size === "lg"
@@ -23,16 +22,14 @@ export function JobSalaryDisplay({
       {hasRange ? (
         <>
           <div className={`text-brand-blue font-extrabold whitespace-nowrap ${sizeClass}`}>
-            {job.salary.toLocaleString()} – {max!.toLocaleString()}
+            {job.salary.toLocaleString()} – {max.toLocaleString()} {job.salary_currency}
           </div>
-          <div className="text-[10px] sm:text-xs text-muted-foreground">
-            {job.salary_currency} · {job.salary_period}
-          </div>
+          <div className="text-[10px] sm:text-xs text-muted-foreground">{job.salary_period}</div>
         </>
       ) : (
         <>
           <div className={`text-brand-blue font-extrabold whitespace-nowrap ${sizeClass}`}>
-            {formatSalaryRange(job.salary, max, job.salary_currency)}
+            {job.salary.toLocaleString()} {job.salary_currency}
           </div>
           <div className="text-[10px] sm:text-xs text-muted-foreground">{job.salary_period}</div>
         </>

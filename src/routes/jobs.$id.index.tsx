@@ -10,7 +10,7 @@ import { ShareJobButtons } from "@/components/ShareJobButtons";
 import { JobInfoGrid } from "@/components/JobInfoGrid";
 import { JobSalaryDisplay } from "@/components/JobSalaryDisplay";
 import { fetchJobById, formatRelative } from "@/lib/queries";
-import { salaryRangeLabel, readSalaryMax } from "@/lib/job-salary";
+import { jobDisplayFields } from "@/lib/job-salary";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
 import { useAuth } from "@/hooks/use-auth";
 import { isJobSaved, toggleSaveJob } from "@/lib/saved";
@@ -66,6 +66,7 @@ function JobDetailPage() {
 
   const co = getJobCompanyInfo(job);
   const activeFacilities = FACILITIES.filter((f) => job[f.key]);
+  const view = jobDisplayFields(job);
 
   return (
     <div className="container mx-auto max-w-7xl px-4 lg:px-6 py-4 lg:py-6 pb-32">
@@ -112,7 +113,7 @@ function JobDetailPage() {
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <JobSalaryDisplay job={job} size="lg" />
+                <JobSalaryDisplay job={{ ...job, salary_max: view.salary_max }} size="lg" />
                 <button type="button" onClick={onSaveToggle} aria-label="Save job" className="mt-2 inline-flex">
                   <Heart className={`w-5 h-5 ${saved ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />
                 </button>
@@ -131,10 +132,10 @@ function JobDetailPage() {
               </span>
               Job Description
             </h2>
-            <p className="mt-3 text-sm text-foreground/80 leading-relaxed">{job.description}</p>
-            {job.responsibilities.length > 0 && (
+            <p className="mt-3 text-sm text-foreground/80 leading-relaxed">{view.description}</p>
+            {view.responsibilities.length > 0 && (
               <ul className="mt-4 space-y-1.5 text-sm list-disc pl-5 text-foreground/80">
-                {job.responsibilities.map((r, i) => <li key={i}>{r}</li>)}
+                {view.responsibilities.map((r, i) => <li key={i}>{r}</li>)}
               </ul>
             )}
           </div>
@@ -158,7 +159,7 @@ function JobDetailPage() {
             <dl className="divide-y divide-border text-sm">
               <Row label="Category" value={job.category?.name ?? "—"} />
               <Row label="Location" value={job.location} />
-              <Row label="Salary" value={`${salaryRangeLabel(job.salary, readSalaryMax(job), job.salary_currency)} / ${job.salary_period}`} />
+              <Row label="Salary" value={`${view.salaryLabel} / ${job.salary_period}`} />
               <Row label="Experience Required" value={job.experience_required} />
               <Row label="Duty Timing" value={job.duty_timing} />
             </dl>

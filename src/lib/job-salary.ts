@@ -17,24 +17,24 @@ export function readSalaryMax(job: {
   responsibilities?: string[] | null;
   description?: string | null;
 }): number | null {
+  const baseSalary = Number(job.salary) || 0;
   const col = job.salary_max;
   if (col != null && Number(col) > 0) {
     const n = Number(col);
-    if (job.salary != null && n > job.salary) return n;
-    if (job.salary == null) return n;
+    if (!baseSalary || n > baseSalary) return n;
   }
 
-  const tag = (job.responsibilities ?? []).find((r) => r.startsWith(SALARY_MAX_META));
+  const tag = (job.responsibilities ?? []).find((r) => String(r).startsWith(SALARY_MAX_META));
   if (tag) {
-    const n = parseFloat(tag.slice(SALARY_MAX_META.length));
-    if (Number.isFinite(n) && n > 0 && (job.salary == null || n > job.salary)) return n;
+    const n = parseFloat(String(tag).slice(SALARY_MAX_META.length));
+    if (Number.isFinite(n) && n > 0 && (!baseSalary || n > baseSalary)) return n;
   }
 
   const desc = job.description ?? "";
   const m = desc.match(DESC_SALARY_RE);
   if (m) {
     const n = parseFloat(m[1]);
-    if (Number.isFinite(n) && n > 0 && (job.salary == null || n > job.salary)) return n;
+    if (Number.isFinite(n) && n > 0 && (!baseSalary || n > baseSalary)) return n;
   }
 
   return null;
@@ -70,6 +70,16 @@ export function normalizeJob<T extends Job>(job: T): T {
   };
 }
 
+export function jobDisplayFields(job: Job) {
+  const salary_max = job.salary_max ?? readSalaryMax(job);
+  return {
+    salary_max,
+    description: stripSalaryFromDescription(job.description ?? ""),
+    responsibilities: visibleResponsibilities(job.responsibilities),
+    salaryLabel: salaryRangeLabel(job.salary, salary_max, job.salary_currency),
+  };
+}
+
 export function salaryRangeLabel(
   salary: number,
   salaryMax?: number | null,
@@ -92,15 +102,17 @@ export function getJobCompanyInfo(job: Job): {
   const byName = added.find((c) => c.name.toLowerCase() === (job.company_name ?? "").toLowerCase());
 
   const jobName = job.company_name?.trim();
+  const branded = added.find((c) => c.name?.trim() && !["Company", "Job Expert"].includes(c.name.trim()));
+
   const name =
-    jobName && jobName !== "Job Expert"
+    jobName && !["Job Expert", "Company"].includes(jobName)
       ? jobName
-      : company?.name ?? byId?.name ?? byName?.name ?? jobName ?? "Company";
+      : branded?.name ?? company?.name ?? byId?.name ?? byName?.name ?? jobName ?? "Company";
 
   return {
     name,
-    logoUrl: pickUrl(job.company_logo_url, company?.logo_url, byId?.logo_url, byName?.logo_url),
-    website: pickUrl(job.company_website, company?.website, byId?.website, byName?.website),
+    logoUrl: pickUrl(job.company_logo_url, branded?.logo_url, company?.logo_url, byId?.logo_url, byName?.logo_url),
+    website: pickUrl(job.company_website, branded?.website, company?.website, byId?.website, byName?.website),
     verified: company?.verified ?? job.verified,
   };
 }

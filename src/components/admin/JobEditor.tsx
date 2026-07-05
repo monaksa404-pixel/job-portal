@@ -5,7 +5,7 @@ import { AmountInput } from "@/components/AmountInput";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, MapPin, Building2, Upload, Plus, ChevronDown } from "lucide-react";
 import { parseSalaryAmount, resolveJobSalary } from "@/lib/utils";
-import { readSalaryMax, packSalaryMeta, packDescriptionSalary, salaryRangeLabel, stripSalaryFromDescription } from "@/lib/job-salary";
+import { readSalaryMax, packDescriptionSalary, salaryRangeLabel, stripSalaryFromDescription, visibleResponsibilities, jobDisplayFields } from "@/lib/job-salary";
 
 type Category = { id: string; name: string };
 type Company = { id: string; name: string; logo_url: string | null; website: string | null; verified: boolean };
@@ -297,8 +297,8 @@ export function JobEditor({ jobId }: { jobId?: string }) {
 
     const savePayload = {
       ...payload,
-      description: packDescriptionSalary(payload.description, payload.salary_max),
-      responsibilities: packSalaryMeta(currentResp, payload.salary_max),
+      description: packDescriptionSalary(stripSalaryFromDescription(f.description), payload.salary_max),
+      responsibilities: visibleResponsibilities(currentResp),
     };
 
     const trySave = async (row: typeof savePayload & { status?: "active" }) => {
