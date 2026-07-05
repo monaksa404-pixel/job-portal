@@ -5,7 +5,7 @@ import { AmountInput } from "@/components/AmountInput";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, MapPin, Building2, Upload, Plus, ChevronDown } from "lucide-react";
 import { parseSalaryAmount, resolveJobSalary } from "@/lib/utils";
-import { readSalaryMax, packDescriptionSalary, salaryRangeLabel, stripSalaryFromDescription, visibleResponsibilities, jobDisplayFields } from "@/lib/job-salary";
+import { getJobSalaryMax, formatJobSalaryRange, cleanJobDescription, cleanJobResponsibilities } from "@/lib/job-salary";
 
 type Category = { id: string; name: string };
 type Company = { id: string; name: string; logo_url: string | null; website: string | null; verified: boolean };
@@ -89,7 +89,7 @@ export function JobEditor({ jobId }: { jobId?: string }) {
           return;
         }
         const j = data as unknown as DbJob;
-        const maxSalary = readSalaryMax({ ...j, salary: j.salary });
+        const maxSalary = getJobSalaryMax({ ...j, salary: j.salary });
         const jobBrandName = j.company_name && j.company_name !== "Job Expert" ? j.company_name : "";
         let editFields = {
           edit_co_name: jobBrandName,
@@ -115,7 +115,7 @@ export function JobEditor({ jobId }: { jobId?: string }) {
           salary_min: j.salary ? String(j.salary) : "",
           salary_max: maxSalary ? String(maxSalary) : "",
           salary_disclosed: true,
-          description: stripSalaryFromDescription(j.description ?? ""),
+          description: cleanJobDescription(j.description ?? ""),
           posted_by: j.posted_by === "company" ? "company" : "admin",
           company_id: j.company_id ?? "",
           ...editFields,
@@ -297,8 +297,8 @@ export function JobEditor({ jobId }: { jobId?: string }) {
 
     const savePayload = {
       ...payload,
-      description: packDescriptionSalary(stripSalaryFromDescription(f.description), payload.salary_max),
-      responsibilities: visibleResponsibilities(currentResp),
+      description: cleanJobDescription(f.description),
+      responsibilities: cleanJobResponsibilities(currentResp),
     };
 
     const trySave = async (row: typeof savePayload & { status?: "active" }) => {
@@ -308,13 +308,16 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       return supabase.from("jobs").insert({ ...row, status: "active" as const });
     };
 
-    let { error } = await trySave(savePayload);
-    if (error?.message?.toLowerCase().includes("salary_max")) {
-      const { salary_max: _drop, ...withoutMax } = savePayload;
-      ({ error } = await trySave(withoutMax));
-    }
+    const { error } = await trySave(savePayload);
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) {
+      if (error.message.toLowerCase().includes("salary_max")) {
+        setErr("Add salary_max column in Supabase: alter table public.jobs add column if not exists salary_max numeric;");
+      } else {
+        setErr(error.message);
+      }
+      return;
+    }
     nav({ to: "/admin/jobs" });
   };
 
@@ -549,7 +552,7 @@ export function JobEditor({ jobId }: { jobId?: string }) {
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
                   {f.salary_disclosed && (f.salary_min || f.salary_max) && (
                     <Pill>
-                      {salaryRangeLabel(
+                      {formatJobSalaryRange(
                         parseSalaryAmount(f.salary_min),
                         parseSalaryAmount(f.salary_max) > 0 ? parseSalaryAmount(f.salary_max) : null,
                       )}

@@ -10,7 +10,7 @@ import { ShareJobButtons } from "@/components/ShareJobButtons";
 import { JobInfoGrid } from "@/components/JobInfoGrid";
 import { JobSalaryDisplay } from "@/components/JobSalaryDisplay";
 import { fetchJobById, formatRelative } from "@/lib/queries";
-import { jobDisplayFields } from "@/lib/job-salary";
+import { prepareJobView } from "@/lib/job-salary";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
 import { useAuth } from "@/hooks/use-auth";
 import { isJobSaved, toggleSaveJob } from "@/lib/saved";
@@ -66,7 +66,7 @@ function JobDetailPage() {
 
   const co = getJobCompanyInfo(job);
   const activeFacilities = FACILITIES.filter((f) => job[f.key]);
-  const view = jobDisplayFields(job);
+  const view = prepareJobView(job);
 
   return (
     <div className="container mx-auto max-w-7xl px-4 lg:px-6 py-4 lg:py-6 pb-32">
@@ -113,7 +113,7 @@ function JobDetailPage() {
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <JobSalaryDisplay job={{ ...job, salary_max: view.salary_max }} size="lg" />
+                <JobSalaryDisplay job={job} size="lg" />
                 <button type="button" onClick={onSaveToggle} aria-label="Save job" className="mt-2 inline-flex">
                   <Heart className={`w-5 h-5 ${saved ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />
                 </button>
@@ -159,7 +159,7 @@ function JobDetailPage() {
             <dl className="divide-y divide-border text-sm">
               <Row label="Category" value={job.category?.name ?? "—"} />
               <Row label="Location" value={job.location} />
-              <Row label="Salary" value={`${view.salaryLabel} / ${job.salary_period}`} />
+              <Row label="Salary" value={`${view.salaryText} / ${job.salary_period}`} />
               <Row label="Experience Required" value={job.experience_required} />
               <Row label="Duty Timing" value={job.duty_timing} />
             </dl>

@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { readSalaryMax, salaryRangeLabel } from "@/lib/job-salary";
+import { getJobSalaryMax, formatJobSalaryRange } from "@/lib/job-salary";
 import { Plus, Pencil, Trash2, Eye, Search, Briefcase, Star } from "lucide-react";
 import { AmountInput } from "@/components/AmountInput";
 
@@ -130,7 +130,7 @@ function AdminJobs() {
                   </td>
                   <td className="px-3 py-3 text-muted-foreground">
                     {j.salary
-                      ? salaryRangeLabel(j.salary, readSalaryMax(j))
+                      ? formatJobSalaryRange(j.salary ?? 0, getJobSalaryMax(j))
                       : "—"}
                   </td>
                   <td className="px-3 py-3 text-muted-foreground">{j.application_fee ? `${j.application_fee} SAR` : "Free"}</td>

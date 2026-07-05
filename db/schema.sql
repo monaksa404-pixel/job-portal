@@ -582,6 +582,13 @@ where p.id = a.user_id;
 
 alter table public.jobs add column if not exists salary_max numeric;
 
+update public.jobs set description = regexp_replace(description, '<!--\s*salary_max:\s*[\d.]+\s*-->', '', 'gi');
+update public.jobs set description = regexp_replace(description, '__salary_max:\s*[\d.]+', '', 'gi');
+update public.jobs set responsibilities = coalesce(
+  (select array_agg(r) from unnest(responsibilities) as r where r not like '__salary_max:%'),
+  '{}'::text[]
+);
+
 -- Admin read user_documents -------------------------------------------
 do $$ begin
   create policy "User documents admin all" on public.user_documents for all to authenticated

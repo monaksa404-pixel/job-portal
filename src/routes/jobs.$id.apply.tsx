@@ -12,7 +12,7 @@ import { PhoneInput, buildFullPhone } from "@/components/PhoneInput";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
 import { StcLogo } from "@/components/StcLogo";
 import type { Job } from "@/lib/types";
-import { jobDisplayFields } from "@/lib/job-salary";
+import { prepareJobView } from "@/lib/job-salary";
 
 export const Route = createFileRoute("/jobs/$id/apply")({
   head: () => ({ meta: [{ title: "Apply for Job — Job Expert" }] }),
@@ -297,7 +297,7 @@ function Stepper({ step, light = false }: { step: number; light?: boolean }) {
 
 function JobSummary({ job }: { job: Job }) {
   const co = getJobCompanyInfo(job);
-  const view = jobDisplayFields(job);
+  const view = prepareJobView(job);
   return (
     <>
       <div className="bg-white rounded-2xl border border-border p-5">
@@ -315,7 +315,7 @@ function JobSummary({ job }: { job: Job }) {
         </div>
         <dl className="mt-4 divide-y divide-border text-sm">
           <Row label="Job Type" value={job.job_type} />
-          <Row label="Salary" value={`${view.salaryLabel} / ${job.salary_period}`} />
+          <Row label="Salary" value={`${view.salaryText} / ${job.salary_period}`} />
           <Row label="Experience" value={job.experience_required} />
         </dl>
       </div>

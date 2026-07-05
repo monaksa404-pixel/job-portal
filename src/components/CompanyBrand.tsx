@@ -1,5 +1,4 @@
 import type { Job } from "@/lib/types";
-import { getJobCompanyInfo as resolveCompanyInfo } from "@/lib/job-salary";
 import blueTick from "@/images/blue-tick.png";
 
 export type CompanyInfo = {
@@ -9,8 +8,32 @@ export type CompanyInfo = {
   verified: boolean;
 };
 
+function pickUrl(...vals: (string | null | undefined)[]): string | null {
+  for (const v of vals) {
+    const s = v?.trim();
+    if (s) return s;
+  }
+  return null;
+}
+
 export function getJobCompanyInfo(job: Job): CompanyInfo {
-  return resolveCompanyInfo(job);
+  const company = job.company ?? null;
+  const added = job.added_companies ?? [];
+  const byId = job.company_id ? added.find((c) => c.id === job.company_id) : null;
+  const branded = added.find((c) => c.name?.trim() && !["Company", "Job Expert"].includes(c.name.trim()));
+
+  const jobName = job.company_name?.trim() ?? "";
+  const name =
+    jobName && !["Job Expert", "Company"].includes(jobName)
+      ? jobName
+      : branded?.name ?? company?.name ?? byId?.name ?? jobName || "Company";
+
+  return {
+    name,
+    logoUrl: pickUrl(job.company_logo_url, branded?.logo_url, company?.logo_url, byId?.logo_url),
+    website: pickUrl(job.company_website, branded?.website, company?.website, byId?.website),
+    verified: company?.verified ?? job.verified,
+  };
 }
 
 export function formatWebsiteDisplay(url: string | null | undefined): string | null {
