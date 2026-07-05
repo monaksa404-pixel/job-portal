@@ -32,7 +32,7 @@ function JobDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [saved, setSaved] = useState(false);
-  const q = useQuery({ queryKey: ["job", id], queryFn: () => fetchJobById(id) });
+  const q = useQuery({ queryKey: ["job", id], queryFn: () => fetchJobById(id), staleTime: 0 });
   const job = q.data;
 
   useEffect(() => {

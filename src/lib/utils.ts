@@ -25,7 +25,7 @@ export function resolveJobSalary(
 }
 
 export function formatSalaryRange(salary: number, salaryMax?: number | null, currency = "SAR"): string {
-  if (salaryMax && salaryMax > salary) {
+  if (salaryMax != null && salaryMax > salary) {
     return `${salary.toLocaleString()} – ${salaryMax.toLocaleString()} ${currency}`;
   }
   return `${salary.toLocaleString()} ${currency}`;

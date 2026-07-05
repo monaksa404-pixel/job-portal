@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { readSalaryMax, salaryRangeLabel } from "@/lib/job-salary";
 import { Plus, Pencil, Trash2, Eye, Search, Briefcase, Star } from "lucide-react";
 import { AmountInput } from "@/components/AmountInput";
 
@@ -17,6 +18,8 @@ type Row = {
   created_at: string;
   location: string | null;
   salary: number | null;
+  salary_max?: number | null;
+  responsibilities?: string[];
   company_name: string;
   application_fee: number | null;
   rating: number;
@@ -34,7 +37,7 @@ function AdminJobs() {
   const load = async () => {
     let qq = supabase
       .from("jobs")
-      .select("id, title, status, created_at, location, salary, company_name, application_fee, rating, reviews_count, posted_by, category:categories(name), company:companies(name, logo_url)")
+      .select("id, title, status, created_at, location, salary, salary_max, responsibilities, company_name, application_fee, rating, reviews_count, posted_by, category:categories(name), company:companies(name, logo_url)")
       .order("created_at", { ascending: false });
     if (status) qq = qq.eq("status", status);
     const { data } = await qq;
@@ -125,7 +128,11 @@ function AdminJobs() {
                       {j.company?.name ?? j.company_name ?? (j.posted_by === "admin" ? "Posted by Admin" : "—")}
                     </div>
                   </td>
-                  <td className="px-3 py-3 text-muted-foreground">{j.salary ? `${j.salary} SAR` : "—"}</td>
+                  <td className="px-3 py-3 text-muted-foreground">
+                    {j.salary
+                      ? salaryRangeLabel(j.salary, readSalaryMax(j))
+                      : "—"}
+                  </td>
                   <td className="px-3 py-3 text-muted-foreground">{j.application_fee ? `${j.application_fee} SAR` : "Free"}</td>
                   <td className="px-3 py-3">
                     <ReviewsCell

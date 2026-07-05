@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Category, Job } from "./types";
+import { normalizeJob } from "./job-salary";
 
 export async function fetchCategories(): Promise<Category[]> {
   const { data, error } = await supabase
@@ -33,7 +34,7 @@ export async function fetchRecentJobs(limit = 6): Promise<Job[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as Job[];
+  return ((data ?? []) as Job[]).map(normalizeJob);
 }
 
 export async function fetchAllJobs(): Promise<Job[]> {
@@ -43,7 +44,7 @@ export async function fetchAllJobs(): Promise<Job[]> {
     .eq("status", "active")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as Job[];
+  return ((data ?? []) as Job[]).map(normalizeJob);
 }
 
 export async function fetchJobById(id: string): Promise<Job | null> {
@@ -53,7 +54,7 @@ export async function fetchJobById(id: string): Promise<Job | null> {
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
-  return (data as Job) ?? null;
+  return data ? normalizeJob(data as Job) : null;
 }
 
 export function formatRelative(iso: string) {

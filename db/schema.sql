@@ -105,6 +105,7 @@ create table if not exists public.jobs (
   company_logo_url text,
   category_id uuid references public.categories(id) on delete set null,
   salary numeric not null default 0,
+  salary_max numeric,
   salary_currency text not null default 'SAR',
   salary_period text not null default 'Monthly',
   location text not null,
@@ -433,6 +434,7 @@ alter table public.jobs add column if not exists posted_by text not null default
 alter table public.jobs add column if not exists employment_type text not null default 'Permanent';
 alter table public.jobs add column if not exists added_companies jsonb not null default '[]'::jsonb;
 alter table public.jobs add column if not exists company_website text;
+alter table public.jobs add column if not exists salary_max numeric;
 
 update public.companies set website = 'https://www.noon.com' where lower(name) = 'noon' and (website is null or website = '');
 

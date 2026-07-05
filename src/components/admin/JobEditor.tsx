@@ -5,6 +5,7 @@ import { AmountInput } from "@/components/AmountInput";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, MapPin, Building2, Upload, Plus, ChevronDown } from "lucide-react";
 import { parseSalaryAmount, resolveJobSalary } from "@/lib/utils";
+import { readSalaryMax, packSalaryMeta, salaryRangeLabel } from "@/lib/job-salary";
 
 type Category = { id: string; name: string };
 type Company = { id: string; name: string; logo_url: string | null; website: string | null; verified: boolean };
@@ -38,6 +39,10 @@ type DbJob = Form & {
   id: string;
   salary: number;
   salary_max?: number | null;
+  company_name?: string;
+  company_logo_url?: string | null;
+  company_website?: string | null;
+  responsibilities?: string[];
   application_fee: number;
   company_id: string | null;
   posted_by: string;
@@ -84,6 +89,7 @@ export function JobEditor({ jobId }: { jobId?: string }) {
           return;
         }
         const j = data as unknown as DbJob;
+        const maxSalary = readSalaryMax(j);
         let editFields = { edit_co_name: "", edit_co_logo: "", edit_co_website: "" };
         if (j.company_id) {
           const { data: coRow } = await supabase.from("companies").select("name, logo_url, website").eq("id", j.company_id).maybeSingle();
@@ -94,6 +100,12 @@ export function JobEditor({ jobId }: { jobId?: string }) {
               edit_co_website: coRow.website ?? "",
             };
           }
+        } else if (j.company_name && j.company_name !== "Job Expert") {
+          editFields = {
+            edit_co_name: j.company_name,
+            edit_co_logo: j.company_logo_url ?? "",
+            edit_co_website: j.company_website ?? "",
+          };
         }
         setF({
           title: j.title ?? "",
@@ -102,7 +114,7 @@ export function JobEditor({ jobId }: { jobId?: string }) {
           employment_type: j.employment_type ?? "Permanent",
           location: j.location ?? "",
           salary_min: j.salary ? String(j.salary) : "",
-          salary_max: j.salary_max ? String(j.salary_max) : "",
+          salary_max: maxSalary ? String(maxSalary) : "",
           salary_disclosed: true,
           description: j.description ?? "",
           posted_by: j.posted_by === "company" ? "company" : "admin",
@@ -183,20 +195,30 @@ export function JobEditor({ jobId }: { jobId?: string }) {
   };
 
   const buildPayload = () => {
+    const selectedCo = f.company_id ? cos.find((c) => c.id === f.company_id) : null;
+    const brandingName = f.edit_co_name.trim();
+    const brandingLogo = f.edit_co_logo.trim() || null;
+    const brandingWebsite = f.edit_co_website.trim() || null;
     const useCompany = !!f.company_id;
-    const companyName = useCompany
-      ? (f.edit_co_name.trim() || cos.find((c) => c.id === f.company_id)?.name || "Company")
-      : "Job Expert";
-    const companyLogo = useCompany ? (f.edit_co_logo || cos.find((c) => c.id === f.company_id)?.logo_url || null) : null;
-    const companyWebsite = useCompany ? (f.edit_co_website.trim() || cos.find((c) => c.id === f.company_id)?.website || null) : null;
+    const companyName = brandingName || selectedCo?.name || (useCompany ? "Company" : "Job Expert");
+    const companyLogo = brandingLogo ?? selectedCo?.logo_url ?? null;
+    const companyWebsite = brandingWebsite ?? selectedCo?.website ?? null;
     const { salary, salary_max } = resolveJobSalary(f.salary_min, f.salary_max, f.application_fee);
     const applicationFee = parseSalaryAmount(f.application_fee) || (f.fee_enabled ? 50 : 0);
     const rating = Math.min(5, Math.max(1, Number(f.rating) || 4.5));
     const reviewsCount = Math.max(0, Math.floor(Number(f.reviews_count) || 0));
-    const selectedCompany = cos.find((c) => c.id === f.company_id);
+    const selectedCompany = selectedCo;
     const syncedCompanies = useCompany && selectedCompany
       ? [{ id: selectedCompany.id, name: companyName, logo_url: companyLogo, website: companyWebsite }]
-      : f.added_companies;
+      : f.added_companies.length
+        ? f.added_companies.map((c) =>
+            c.id === f.company_id
+              ? { ...c, name: companyName, logo_url: companyLogo, website: companyWebsite }
+              : c,
+          )
+        : brandingName
+          ? [{ id: f.company_id || "local", name: companyName, logo_url: companyLogo, website: companyWebsite }]
+          : f.added_companies;
 
     return {
       title: f.title.trim(),
@@ -213,7 +235,7 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       rating,
       reviews_count: reviewsCount,
       verified: useCompany ? (selectedCompany?.verified ?? true) : true,
-      posted_by: useCompany ? "company" : f.posted_by,
+      posted_by: useCompany || brandingName ? "company" : f.posted_by,
       company_id: useCompany ? f.company_id : null,
       added_companies: syncedCompanies,
       male_required: f.male_required,
@@ -249,11 +271,11 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       return;
     }
 
-    if (f.company_id && f.edit_co_name.trim()) {
+    if (f.company_id) {
       const { error: coErr } = await supabase.from("companies").update({
-        name: f.edit_co_name.trim(),
-        logo_url: f.edit_co_logo || null,
-        website: f.edit_co_website.trim() || null,
+        name: payload.company_name,
+        logo_url: payload.company_logo_url,
+        website: payload.company_website,
       }).eq("id", f.company_id);
       if (coErr) {
         setErr(coErr.message);
@@ -263,12 +285,31 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       await loadCompanies();
     }
 
+    let currentResp: string[] = [];
     if (isEdit && jobId) {
-      const { error } = await supabase.from("jobs").update(payload).eq("id", jobId);
+      const { data: ex } = await supabase.from("jobs").select("responsibilities").eq("id", jobId).maybeSingle();
+      currentResp = (ex?.responsibilities as string[]) ?? [];
+    }
+
+    const savePayload = {
+      ...payload,
+      responsibilities: packSalaryMeta(currentResp, payload.salary_max),
+    };
+
+    if (isEdit && jobId) {
+      let { error } = await supabase.from("jobs").update(savePayload).eq("id", jobId);
+      if (error?.message?.toLowerCase().includes("salary_max")) {
+        const { salary_max: _drop, ...withoutMax } = savePayload;
+        ({ error } = await supabase.from("jobs").update(withoutMax).eq("id", jobId));
+      }
       setBusy(false);
       if (error) { setErr(error.message); return; }
     } else {
-      const { error } = await supabase.from("jobs").insert({ ...payload, status: "active" as const });
+      let { error } = await supabase.from("jobs").insert({ ...savePayload, status: "active" as const });
+      if (error?.message?.toLowerCase().includes("salary_max")) {
+        const { salary_max: _drop, ...withoutMax } = savePayload;
+        ({ error } = await supabase.from("jobs").insert({ ...withoutMax, status: "active" as const }));
+      }
       setBusy(false);
       if (error) { setErr(error.message); return; }
     }
@@ -403,25 +444,23 @@ export function JobEditor({ jobId }: { jobId?: string }) {
                   </select>
                 </Field>
 
-                {f.company_id && (
-                  <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 bg-secondary/30 rounded-xl p-4">
-                    <Field label="Company Name">
-                      <input value={f.edit_co_name} onChange={(e) => setF({ ...f, edit_co_name: e.target.value })} className="inp" />
-                    </Field>
-                    <Field label="Company Website">
-                      <input value={f.edit_co_website} onChange={(e) => setF({ ...f, edit_co_website: e.target.value })} placeholder="https://" className="inp" />
-                    </Field>
-                    <Field label="Company Logo">
-                      <div className="flex items-center gap-3">
-                        {f.edit_co_logo ? <img src={f.edit_co_logo} alt="" className="w-16 h-16 rounded-xl object-cover border border-border" /> : <div className="w-16 h-16 rounded-xl bg-white border border-border flex items-center justify-center"><Building2 className="w-5 h-5 text-muted-foreground" /></div>}
-                        <label className="cursor-pointer px-3 py-2 rounded-lg border border-border text-sm hover:bg-white">
-                          {uploading ? "Uploading…" : "Change Logo"}
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0], "edit")} />
-                        </label>
-                      </div>
-                    </Field>
-                  </div>
-                )}
+                <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 bg-secondary/30 rounded-xl p-4">
+                  <Field label="Company Name">
+                    <input value={f.edit_co_name} onChange={(e) => setF({ ...f, edit_co_name: e.target.value })} placeholder="Company name on job listing" className="inp" />
+                  </Field>
+                  <Field label="Company Website">
+                    <input value={f.edit_co_website} onChange={(e) => setF({ ...f, edit_co_website: e.target.value })} placeholder="https://" className="inp" />
+                  </Field>
+                  <Field label="Company Logo">
+                    <div className="flex items-center gap-3">
+                      {f.edit_co_logo ? <img src={f.edit_co_logo} alt="" className="w-16 h-16 rounded-xl object-cover border border-border" /> : <div className="w-16 h-16 rounded-xl bg-white border border-border flex items-center justify-center"><Building2 className="w-5 h-5 text-muted-foreground" /></div>}
+                      <label className="cursor-pointer px-3 py-2 rounded-lg border border-border text-sm hover:bg-white">
+                        {uploading ? "Uploading…" : "Change Logo"}
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0], "edit")} />
+                      </label>
+                    </div>
+                  </Field>
+                </div>
 
                 <div className="mt-5">
                   <div className="text-sm font-bold text-brand-navy mb-3">Add New Company</div>
@@ -504,7 +543,12 @@ export function JobEditor({ jobId }: { jobId?: string }) {
                 <div className="text-sm text-muted-foreground">{f.location || "Location"} · {cats.find((c) => c.id === f.category_id)?.name ?? "Category"} · {f.job_type}</div>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
                   {f.salary_disclosed && (f.salary_min || f.salary_max) && (
-                    <Pill>{parseSalaryAmount(f.salary_min) || "0"}–{parseSalaryAmount(f.salary_max) || parseSalaryAmount(f.salary_min) || "0"} SAR</Pill>
+                    <Pill>
+                      {salaryRangeLabel(
+                        parseSalaryAmount(f.salary_min),
+                        parseSalaryAmount(f.salary_max) > 0 ? parseSalaryAmount(f.salary_max) : null,
+                      )}
+                    </Pill>
                   )}
                   {f.experience_required && <Pill>Exp: {f.experience_required}</Pill>}
                   <Pill>{f.rating} ★ · {f.reviews_count} Reviews</Pill>
