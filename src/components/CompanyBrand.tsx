@@ -26,7 +26,7 @@ export function getJobCompanyInfo(job: Job): CompanyInfo {
   const name =
     jobName && !["Job Expert", "Company"].includes(jobName)
       ? jobName
-      : branded?.name ?? company?.name ?? byId?.name ?? jobName || "Company";
+      : branded?.name ?? company?.name ?? byId?.name ?? (jobName || "Company");
 
   return {
     name,
