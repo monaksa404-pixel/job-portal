@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { AmountInput } from "@/components/AmountInput";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MapPin, Building2, Upload, Plus } from "lucide-react";
+import { Check, MapPin, Building2, Upload, Plus, ChevronDown } from "lucide-react";
 import { parseSalaryAmount, resolveJobSalary } from "@/lib/utils";
 
 type Category = { id: string; name: string };
@@ -322,14 +322,18 @@ export function JobEditor({ jobId }: { jobId?: string }) {
                 </select>
               </Field>
               <Field label="Job Type *">
-                <select value={f.job_type} onChange={(e) => setF({ ...f, job_type: e.target.value })} className="inp">
-                  {["Full-time","Part-time","Contract","Internship"].map((x) => <option key={x}>{x}</option>)}
-                </select>
+                <OptionPicker
+                  value={f.job_type}
+                  options={["Full-time", "Part-time", "Contract", "Internship"]}
+                  onChange={(v) => setF({ ...f, job_type: v })}
+                />
               </Field>
               <Field label="Employment Type *">
-                <select value={f.employment_type} onChange={(e) => setF({ ...f, employment_type: e.target.value })} className="inp">
-                  {["Permanent","Temporary","Seasonal"].map((x) => <option key={x}>{x}</option>)}
-                </select>
+                <OptionPicker
+                  value={f.employment_type}
+                  options={["Permanent", "Temporary", "Seasonal"]}
+                  onChange={(v) => setF({ ...f, employment_type: v })}
+                />
               </Field>
               <Field label="Location *">
                 <div className="relative">
@@ -545,6 +549,49 @@ export function JobEditor({ jobId }: { jobId?: string }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div><label className="text-xs font-bold text-brand-navy">{label}</label><div className="mt-1.5">{children}</div></div>;
 }
+
+function OptionPicker({
+  value,
+  options,
+  onChange,
+  placeholder = "Select",
+}: {
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className="inp text-left flex items-center justify-between gap-2">
+        <span className={value ? "text-brand-navy" : "text-muted-foreground"}>{value || placeholder}</span>
+        <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {options.map((opt) => {
+              const selected = value === opt;
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => { onChange(opt); setOpen(false); }}
+                  className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-brand-navy border-b border-border last:border-0 hover:bg-secondary/40"
+                >
+                  <span>{opt}</span>
+                  {selected ? <span className="text-base leading-none">✔️</span> : <span className="w-4" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function Pill({ children }: { children: React.ReactNode }) {
   return <span className="px-2 py-1 rounded-md bg-white border border-border text-brand-navy font-semibold">{children}</span>;
 }

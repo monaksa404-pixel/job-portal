@@ -2,13 +2,14 @@ import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-r
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
-  Bookmark, MapPin, Star, Briefcase, Clock, Users, CreditCard,
+  Bookmark, MapPin, Star, CreditCard,
   Home, Utensils, Bus, ShieldPlus, Timer, ChevronRight, Share2,
   Info, Heart,
 } from "lucide-react";
 import { ShareJobButtons } from "@/components/ShareJobButtons";
+import { JobInfoGrid } from "@/components/JobInfoGrid";
+import { JobSalaryDisplay } from "@/components/JobSalaryDisplay";
 import { fetchJobById, formatRelative } from "@/lib/queries";
-import { formatSalaryRange } from "@/lib/utils";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
 import { useAuth } from "@/hooks/use-auth";
 import { isJobSaved, toggleSaveJob } from "@/lib/saved";
@@ -105,21 +106,15 @@ function JobDetailPage() {
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <div className="text-brand-blue font-extrabold text-lg lg:text-xl whitespace-nowrap">
-                  {formatSalaryRange(job.salary, job.salary_max, job.salary_currency)}
-                </div>
-                <div className="text-xs text-muted-foreground">{job.salary_period}</div>
+                <JobSalaryDisplay job={job} size="lg" />
                 <button type="button" onClick={onSaveToggle} aria-label="Save job" className="mt-2 inline-flex">
                   <Heart className={`w-5 h-5 ${saved ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />
                 </button>
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <Info1 icon={Briefcase} label="Experience" value={job.experience_required} />
-              <Info1 icon={Clock} label="Duty Timing" value={job.duty_timing} />
-              <Info1 icon={Users} label="Vacancies" value={`M: ${job.male_required} · F: ${job.female_required}`} compact />
-              <Info1 icon={CreditCard} label="Application Fee" value={`${job.application_fee} SAR`} />
+            <div className="mt-5">
+              <JobInfoGrid job={job} />
             </div>
           </div>
 
@@ -253,19 +248,6 @@ function JobDetailPage() {
 function Tag({ children, tone }: { children: React.ReactNode; tone: "emerald" | "blue" }) {
   const c = tone === "emerald" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700";
   return <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${c}`}>{children}</span>;
-}
-function Info1({ icon: Icon, label, value, compact }: { icon: typeof Briefcase; label: string; value: string; compact?: boolean }) {
-  return (
-    <div className="bg-secondary/60 rounded-xl p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 min-w-0">
-      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white flex items-center justify-center text-brand-blue shrink-0">
-        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-[9px] sm:text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className={`font-semibold text-brand-navy ${compact ? "text-[11px] sm:text-xs leading-snug break-words" : "text-xs sm:text-sm truncate"}`}>{value}</div>
-      </div>
-    </div>
-  );
 }
 function Facility({ icon: Icon, label, color }: { icon: typeof Home; label: string; color: string }) {
   return (

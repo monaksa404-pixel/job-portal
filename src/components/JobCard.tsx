@@ -2,8 +2,9 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { MapPin, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Job } from "@/lib/types";
+import { JobInfoGrid } from "@/components/JobInfoGrid";
+import { JobSalaryDisplay } from "@/components/JobSalaryDisplay";
 import { formatRelative } from "@/lib/queries";
-import { formatSalaryRange } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { isJobSaved, toggleSaveJob } from "@/lib/saved";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
@@ -53,28 +54,18 @@ export function JobCard({ job }: { job: Job }) {
           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
             <MapPin className="w-3 h-3 shrink-0" /> {job.location}
           </p>
-          <div className="mt-3 flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-medium">
-              {job.job_type}
-            </span>
-            <span className="text-[11px] px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-medium">
-              {job.experience_required}
-            </span>
-            <span className="text-[11px] text-muted-foreground">
-              {formatRelative(job.created_at)}
-            </span>
-          </div>
         </div>
-        <div className="text-right shrink-0">
-          <div className="text-brand-blue font-bold text-sm whitespace-nowrap">
-            {formatSalaryRange(job.salary, job.salary_max, job.salary_currency)}
-          </div>
-          <div className="text-[10px] text-muted-foreground">{job.salary_period}</div>
-          <button onClick={onToggle} aria-label="Save job" className="mt-1 inline-flex">
+        <div>
+          <JobSalaryDisplay job={job} size="sm" />
+          <button onClick={onToggle} aria-label="Save job" className="mt-1 inline-flex float-right">
             <Heart className={`w-4 h-4 ${saved ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />
           </button>
         </div>
       </div>
+      <div className="mt-3">
+        <JobInfoGrid job={job} compact />
+      </div>
+      <div className="mt-2 text-[11px] text-muted-foreground">{formatRelative(job.created_at)}</div>
     </Link>
   );
 }
