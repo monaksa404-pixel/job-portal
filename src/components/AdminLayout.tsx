@@ -12,7 +12,7 @@ const items = [
   { to: "/admin/dashboard",     label: "Dashboard",            icon: LayoutDashboard },
   { to: "/admin/jobs",          label: "Job Management",       icon: Briefcase },
   { to: "/admin/applications",  label: "Applications",         icon: FileText },
-  { to: "/admin/documents",      label: "User Documents",       icon: FolderOpen },
+  { to: "/admin/documents",      label: "User Applications",    icon: FolderOpen },
   { to: "/admin/support",       label: "Support Tickets",      icon: LifeBuoy },
   { to: "/admin/users",         label: "Users",                icon: Users },
   { to: "/admin/categories",    label: "Categories",           icon: Tag },

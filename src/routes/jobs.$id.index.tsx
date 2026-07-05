@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { ShareJobButtons } from "@/components/ShareJobButtons";
 import { fetchJobById, formatRelative } from "@/lib/queries";
+import { formatSalaryRange } from "@/lib/utils";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
 import { useAuth } from "@/hooks/use-auth";
 import { isJobSaved, toggleSaveJob } from "@/lib/saved";
@@ -105,7 +106,7 @@ function JobDetailPage() {
               </div>
               <div className="text-right shrink-0">
                 <div className="text-brand-blue font-extrabold text-lg lg:text-xl whitespace-nowrap">
-                  {job.salary.toLocaleString()} <span className="text-sm">{job.salary_currency}</span>
+                  {formatSalaryRange(job.salary, job.salary_max, job.salary_currency)}
                 </div>
                 <div className="text-xs text-muted-foreground">{job.salary_period}</div>
                 <button type="button" onClick={onSaveToggle} aria-label="Save job" className="mt-2 inline-flex">

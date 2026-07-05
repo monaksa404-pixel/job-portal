@@ -578,6 +578,8 @@ from (
 ) a
 where p.id = a.user_id;
 
+alter table public.jobs add column if not exists salary_max numeric;
+
 -- Admin read user_documents -------------------------------------------
 do $$ begin
   create policy "User documents admin all" on public.user_documents for all to authenticated

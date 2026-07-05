@@ -86,6 +86,7 @@ function CategoriesPage() {
             <Link
               key={c.id}
               to="/jobs"
+              search={{ category: c.id }}
               className="bg-white border border-border rounded-2xl p-5 flex flex-col items-center text-center hover:border-brand-blue/40 hover:shadow-md transition"
             >
               <CategoryIcon name={c.icon} color={c.color} logoUrl={c.logo_url} size={26} className="w-16 h-16" />

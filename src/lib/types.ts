@@ -19,6 +19,7 @@ export type Job = {
   company_id?: string | null;
   category_id: string | null;
   salary: number;
+  salary_max?: number | null;
   salary_currency: string;
   salary_period: string;
   location: string;

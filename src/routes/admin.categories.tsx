@@ -114,8 +114,6 @@ function AdminCategories() {
             <tr>
               <th className="text-left px-5 py-3 font-medium">Logo</th>
               <th className="text-left px-3 py-3 font-medium">Name</th>
-              <th className="text-left px-3 py-3 font-medium">Slug</th>
-              <th className="text-left px-3 py-3 font-medium">Icon</th>
               <th className="text-left px-3 py-3 font-medium">Order</th>
               <th className="text-left px-3 py-3 font-medium">Status</th>
               <th></th>
@@ -128,8 +126,6 @@ function AdminCategories() {
                   <CategoryIcon name={c.icon ?? "briefcase"} color={c.color} logoUrl={c.logo_url} size={20} className="w-10 h-10" />
                 </td>
                 <td className="px-3 py-3 font-semibold text-brand-navy">{c.name}</td>
-                <td className="px-3 py-3 text-muted-foreground">{c.slug}</td>
-                <td className="px-3 py-3 text-muted-foreground">{c.icon}</td>
                 <td className="px-3 py-3">{c.sort_order}</td>
                 <td className="px-3 py-3">
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${c.status ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
@@ -144,7 +140,7 @@ function AdminCategories() {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={7} className="text-center text-muted-foreground py-8">No categories yet</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={5} className="text-center text-muted-foreground py-8">No categories yet</td></tr>}
           </tbody>
         </table>
       </div>

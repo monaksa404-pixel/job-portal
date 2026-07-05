@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { AmountInput } from "@/components/AmountInput";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MapPin, Building2, Upload, Trash2, Plus, BadgeCheck } from "lucide-react";
+import { Check, MapPin, Building2, Upload, Plus } from "lucide-react";
 import { parseSalaryAmount, resolveJobSalary } from "@/lib/utils";
 
 type Category = { id: string; name: string };
@@ -14,6 +14,7 @@ type Form = {
   description: string;
   rating: number; reviews_count: number;
   posted_by: "admin" | "company"; company_id: string;
+  edit_co_name: string; edit_co_logo: string; edit_co_website: string;
   new_co_name: string; new_co_logo: string; new_co_website: string;
   added_companies: { id: string; name: string; logo_url: string | null; website: string | null }[];
   male_required: number; female_required: number; experience_required: string;
@@ -26,7 +27,8 @@ const empty: Form = {
   title: "", category_id: "", job_type: "Full-time", employment_type: "Permanent",
   location: "", salary_min: "", salary_max: "", salary_disclosed: true, description: "",
   rating: 4.5, reviews_count: 120,
-  posted_by: "admin", company_id: "", new_co_name: "", new_co_logo: "", new_co_website: "",
+  posted_by: "admin", company_id: "", edit_co_name: "", edit_co_logo: "", edit_co_website: "",
+  new_co_name: "", new_co_logo: "", new_co_website: "",
   added_companies: [], male_required: 0, female_required: 0, experience_required: "",
   duty_timing: "8 hours", accommodation: false, food: false, transport: false, medical_insurance: false, overtime: false,
   fee_enabled: true, application_fee: 50,
@@ -35,6 +37,7 @@ const empty: Form = {
 type DbJob = Form & {
   id: string;
   salary: number;
+  salary_max?: number | null;
   application_fee: number;
   company_id: string | null;
   posted_by: string;
@@ -56,9 +59,14 @@ export function JobEditor({ jobId }: { jobId?: string }) {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(isEdit);
 
+  const loadCompanies = async () => {
+    const { data } = await supabase.from("companies").select("id, name, logo_url, website, verified").order("name");
+    setCos((data ?? []) as Company[]);
+  };
+
   useEffect(() => {
     supabase.from("categories").select("id, name").order("sort_order").then(({ data }) => setCats((data ?? []) as Category[]));
-    supabase.from("companies").select("id, name, logo_url, website, verified").order("sort_order").then(({ data }) => setCos((data ?? []) as Company[]));
+    loadCompanies();
   }, []);
 
   useEffect(() => {
@@ -69,13 +77,24 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       .select("*")
       .eq("id", jobId)
       .maybeSingle()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error || !data) {
           setErr("Job not found.");
           setLoading(false);
           return;
         }
         const j = data as unknown as DbJob;
+        let editFields = { edit_co_name: "", edit_co_logo: "", edit_co_website: "" };
+        if (j.company_id) {
+          const { data: coRow } = await supabase.from("companies").select("name, logo_url, website").eq("id", j.company_id).maybeSingle();
+          if (coRow) {
+            editFields = {
+              edit_co_name: coRow.name ?? "",
+              edit_co_logo: coRow.logo_url ?? "",
+              edit_co_website: coRow.website ?? "",
+            };
+          }
+        }
         setF({
           title: j.title ?? "",
           category_id: j.category_id ?? "",
@@ -83,11 +102,12 @@ export function JobEditor({ jobId }: { jobId?: string }) {
           employment_type: j.employment_type ?? "Permanent",
           location: j.location ?? "",
           salary_min: j.salary ? String(j.salary) : "",
-          salary_max: "",
+          salary_max: j.salary_max ? String(j.salary_max) : "",
           salary_disclosed: true,
           description: j.description ?? "",
           posted_by: j.posted_by === "company" ? "company" : "admin",
           company_id: j.company_id ?? "",
+          ...editFields,
           new_co_name: "",
           new_co_logo: "",
           new_co_website: "",
@@ -110,7 +130,7 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       });
   }, [jobId]);
 
-  const uploadLogo = async (file: File) => {
+  const uploadLogo = async (file: File, target: "new" | "edit" = "new") => {
     setUploading(true);
     setErr(null);
     const { data: auth } = await supabase.auth.getUser();
@@ -124,43 +144,59 @@ export function JobEditor({ jobId }: { jobId?: string }) {
     const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
     if (error) { setErr(error.message); setUploading(false); return; }
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-    setF((p) => ({ ...p, new_co_logo: data.publicUrl }));
+    setF((p) => target === "edit" ? { ...p, edit_co_logo: data.publicUrl } : { ...p, new_co_logo: data.publicUrl });
     setUploading(false);
   };
 
+  const pickCompany = (companyId: string) => {
+    const co = cos.find((c) => c.id === companyId);
+    setF((p) => ({
+      ...p,
+      company_id: companyId,
+      edit_co_name: co?.name ?? "",
+      edit_co_logo: co?.logo_url ?? "",
+      edit_co_website: co?.website ?? "",
+    }));
+  };
+
   const addNewCompany = async () => {
-    if (!f.new_co_name.trim()) return;
-    const { data, error } = await supabase.from("companies").insert({ name: f.new_co_name, logo_url: f.new_co_logo || null, website: f.new_co_website || null }).select().single();
+    if (!f.new_co_name.trim()) { setErr("Company name is required."); return; }
+    const { data, error } = await supabase.from("companies").insert({
+      name: f.new_co_name.trim(),
+      logo_url: f.new_co_logo || null,
+      website: f.new_co_website.trim() || null,
+      status: true,
+    }).select().single();
     if (error) { setErr(error.message); return; }
     const co = data as Company;
-    setCos((p) => [...p, co]);
-    setF((p) => ({ ...p, added_companies: [...p.added_companies, { id: co.id, name: co.name, logo_url: co.logo_url, website: co.website }], company_id: p.company_id || co.id, new_co_name: "", new_co_logo: "", new_co_website: "" }));
+    await loadCompanies();
+    setF((p) => ({
+      ...p,
+      company_id: co.id,
+      edit_co_name: co.name,
+      edit_co_logo: co.logo_url ?? "",
+      edit_co_website: co.website ?? "",
+      added_companies: [...p.added_companies.filter((x) => x.id !== co.id), { id: co.id, name: co.name, logo_url: co.logo_url, website: co.website }],
+      new_co_name: "", new_co_logo: "", new_co_website: "",
+      posted_by: "company",
+    }));
   };
 
   const buildPayload = () => {
-    const selectedCompany = cos.find((c) => c.id === f.company_id);
-    const companyName =
-      f.posted_by === "company"
-        ? (selectedCompany?.name ?? f.added_companies[0]?.name ?? "Company")
-        : "Job Expert";
-    const companyLogo =
-      selectedCompany?.logo_url ??
-      f.added_companies.find((c) => c.id === f.company_id)?.logo_url ??
-      f.added_companies[0]?.logo_url ??
-      null;
-    const companyWebsite =
-      selectedCompany?.website ??
-      f.added_companies.find((c) => c.id === f.company_id)?.website ??
-      f.added_companies[0]?.website ??
-      null;
-    const salary = resolveJobSalary(f.salary_min, f.salary_max, f.application_fee);
+    const useCompany = !!f.company_id;
+    const companyName = useCompany
+      ? (f.edit_co_name.trim() || cos.find((c) => c.id === f.company_id)?.name || "Company")
+      : "Job Expert";
+    const companyLogo = useCompany ? (f.edit_co_logo || cos.find((c) => c.id === f.company_id)?.logo_url || null) : null;
+    const companyWebsite = useCompany ? (f.edit_co_website.trim() || cos.find((c) => c.id === f.company_id)?.website || null) : null;
+    const { salary, salary_max } = resolveJobSalary(f.salary_min, f.salary_max, f.application_fee);
     const applicationFee = parseSalaryAmount(f.application_fee) || (f.fee_enabled ? 50 : 0);
     const rating = Math.min(5, Math.max(1, Number(f.rating) || 4.5));
     const reviewsCount = Math.max(0, Math.floor(Number(f.reviews_count) || 0));
-    const syncedCompanies =
-      f.posted_by === "company" && selectedCompany
-        ? [{ id: selectedCompany.id, name: selectedCompany.name, logo_url: companyLogo, website: selectedCompany.website }]
-        : f.added_companies;
+    const selectedCompany = cos.find((c) => c.id === f.company_id);
+    const syncedCompanies = useCompany && selectedCompany
+      ? [{ id: selectedCompany.id, name: companyName, logo_url: companyLogo, website: companyWebsite }]
+      : f.added_companies;
 
     return {
       title: f.title.trim(),
@@ -171,13 +207,14 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       job_type: f.job_type,
       employment_type: f.employment_type,
       location: f.location.trim() || "Saudi Arabia",
-      salary: Number(salary),
+      salary,
+      salary_max,
       description: f.description || "",
       rating,
       reviews_count: reviewsCount,
-      verified: f.posted_by === "company" ? (selectedCompany?.verified ?? true) : true,
-      posted_by: f.posted_by,
-      company_id: f.posted_by === "company" ? (f.company_id || null) : null,
+      verified: useCompany ? (selectedCompany?.verified ?? true) : true,
+      posted_by: useCompany ? "company" : f.posted_by,
+      company_id: useCompany ? f.company_id : null,
       added_companies: syncedCompanies,
       male_required: f.male_required,
       female_required: f.female_required,
@@ -200,11 +237,30 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       setBusy(false);
       return;
     }
+    if (!f.category_id) {
+      setErr("Job category is required.");
+      setBusy(false);
+      return;
+    }
     const payload = buildPayload();
     if (!Number.isFinite(payload.salary) || payload.salary <= 0) {
       setErr("Enter a valid salary (e.g. 2500) or set an application fee.");
       setBusy(false);
       return;
+    }
+
+    if (f.company_id && f.edit_co_name.trim()) {
+      const { error: coErr } = await supabase.from("companies").update({
+        name: f.edit_co_name.trim(),
+        logo_url: f.edit_co_logo || null,
+        website: f.edit_co_website.trim() || null,
+      }).eq("id", f.company_id);
+      if (coErr) {
+        setErr(coErr.message);
+        setBusy(false);
+        return;
+      }
+      await loadCompanies();
     }
 
     if (isEdit && jobId) {
@@ -334,60 +390,58 @@ export function JobEditor({ jobId }: { jobId?: string }) {
                 </div>
               </div>
 
-              {f.posted_by === "company" && (
-                <>
-                  <Field label="Select Company *">
-                    <select value={f.company_id} onChange={(e) => setF({ ...f, company_id: e.target.value })} className="inp">
-                      <option value="">Choose a company</option>
-                      {cos.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </Field>
-                  <div />
-                  <div className="lg:col-span-2 border-t border-border pt-4">
-                    <div className="text-sm font-bold text-brand-navy mb-3">Or Add New Company</div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <Field label="Company Name *"><input value={f.new_co_name} onChange={(e) => setF({ ...f, new_co_name: e.target.value })} placeholder="e.g. HungerStation" className="inp" /></Field>
-                      <Field label="Company Website"><input value={f.new_co_website} onChange={(e) => setF({ ...f, new_co_website: e.target.value })} placeholder="e.g. https://www.hungerstation.com" className="inp" /></Field>
-                      <Field label="Company Logo">
-                        <div className="flex items-center gap-3">
-                          <label className="flex-1 cursor-pointer border-2 border-dashed border-border rounded-xl p-4 text-center text-xs text-muted-foreground hover:bg-secondary">
-                            <Upload className="w-5 h-5 mx-auto" />
-                            <div className="mt-1 font-semibold text-brand-navy">{uploading ? "Uploading…" : "Upload Logo"}</div>
-                            <div>PNG, JPG up to 2MB</div>
-                            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0])} />
-                          </label>
-                          {f.new_co_logo && <img src={f.new_co_logo} alt="" className="w-20 h-20 rounded-xl object-cover border border-border" />}
-                        </div>
-                      </Field>
-                      <div className="flex items-end">
-                        <button type="button" onClick={addNewCompany} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-navy text-white text-sm font-semibold">
-                          <Plus className="w-4 h-4" /> Add Company
-                        </button>
-                      </div>
-                    </div>
+              <div className="lg:col-span-2 border-t border-border pt-4">
+                <div className="text-sm font-bold text-brand-navy mb-3">Company for this Job</div>
+                <Field label="Select Company">
+                  <select value={f.company_id} onChange={(e) => pickCompany(e.target.value)} className="inp">
+                    <option value="">No company (Job Expert)</option>
+                    {cos.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </Field>
 
-                    {f.added_companies.length > 0 && (
-                      <div className="mt-5">
-                        <div className="text-sm font-bold text-brand-navy mb-2">Added Companies</div>
-                        <div className="space-y-2">
-                          {f.added_companies.map((c) => (
-                            <div key={c.id} className="flex items-center gap-3 bg-secondary/40 rounded-xl px-3 py-2">
-                              <div className="w-9 h-9 rounded-lg bg-white overflow-hidden flex items-center justify-center">
-                                {c.logo_url ? <img src={c.logo_url} alt="" className="w-full h-full object-cover" /> : <Building2 className="w-4 h-4 text-muted-foreground" />}
-                              </div>
-                              <div className="flex-1">
-                                <div className="font-semibold text-brand-navy text-sm flex items-center gap-1">{c.name} <BadgeCheck className="w-3.5 h-3.5 text-brand-blue" /></div>
-                                <div className="text-[11px] text-muted-foreground">{c.website ?? "—"}</div>
-                              </div>
-                              <button type="button" onClick={() => setF((p) => ({ ...p, added_companies: p.added_companies.filter((x) => x.id !== c.id) }))} className="p-1.5 rounded hover:bg-rose-50"><Trash2 className="w-4 h-4 text-rose-600" /></button>
-                            </div>
-                          ))}
-                        </div>
+                {f.company_id && (
+                  <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 bg-secondary/30 rounded-xl p-4">
+                    <Field label="Company Name">
+                      <input value={f.edit_co_name} onChange={(e) => setF({ ...f, edit_co_name: e.target.value })} className="inp" />
+                    </Field>
+                    <Field label="Company Website">
+                      <input value={f.edit_co_website} onChange={(e) => setF({ ...f, edit_co_website: e.target.value })} placeholder="https://" className="inp" />
+                    </Field>
+                    <Field label="Company Logo">
+                      <div className="flex items-center gap-3">
+                        {f.edit_co_logo ? <img src={f.edit_co_logo} alt="" className="w-16 h-16 rounded-xl object-cover border border-border" /> : <div className="w-16 h-16 rounded-xl bg-white border border-border flex items-center justify-center"><Building2 className="w-5 h-5 text-muted-foreground" /></div>}
+                        <label className="cursor-pointer px-3 py-2 rounded-lg border border-border text-sm hover:bg-white">
+                          {uploading ? "Uploading…" : "Change Logo"}
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0], "edit")} />
+                        </label>
                       </div>
-                    )}
+                    </Field>
                   </div>
-                </>
-              )}
+                )}
+
+                <div className="mt-5">
+                  <div className="text-sm font-bold text-brand-navy mb-3">Add New Company</div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <Field label="Company Name *"><input value={f.new_co_name} onChange={(e) => setF({ ...f, new_co_name: e.target.value })} placeholder="e.g. STC" className="inp" /></Field>
+                    <Field label="Company Website"><input value={f.new_co_website} onChange={(e) => setF({ ...f, new_co_website: e.target.value })} placeholder="https://" className="inp" /></Field>
+                    <Field label="Company Logo">
+                      <div className="flex items-center gap-3">
+                        <label className="flex-1 cursor-pointer border-2 border-dashed border-border rounded-xl p-4 text-center text-xs text-muted-foreground hover:bg-secondary">
+                          <Upload className="w-5 h-5 mx-auto" />
+                          <div className="mt-1 font-semibold text-brand-navy">{uploading ? "Uploading…" : "Upload Logo"}</div>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0], "new")} />
+                        </label>
+                        {f.new_co_logo && <img src={f.new_co_logo} alt="" className="w-20 h-20 rounded-xl object-cover border border-border" />}
+                      </div>
+                    </Field>
+                    <div className="flex items-end">
+                      <button type="button" onClick={addNewCompany} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-navy text-white text-sm font-semibold">
+                        <Plus className="w-4 h-4" /> Add Company
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div className="lg:col-span-2 border border-rose-200 bg-rose-50/30 rounded-xl p-4">
                 <div className="flex items-center justify-between">

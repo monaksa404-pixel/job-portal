@@ -3,6 +3,7 @@ import { MapPin, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Job } from "@/lib/types";
 import { formatRelative } from "@/lib/queries";
+import { formatSalaryRange } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { isJobSaved, toggleSaveJob } from "@/lib/saved";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
@@ -66,7 +67,7 @@ export function JobCard({ job }: { job: Job }) {
         </div>
         <div className="text-right shrink-0">
           <div className="text-brand-blue font-bold text-sm whitespace-nowrap">
-            {job.salary.toLocaleString()} {job.salary_currency}
+            {formatSalaryRange(job.salary, job.salary_max, job.salary_currency)}
           </div>
           <div className="text-[10px] text-muted-foreground">{job.salary_period}</div>
           <button onClick={onToggle} aria-label="Save job" className="mt-1 inline-flex">
