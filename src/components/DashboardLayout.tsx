@@ -60,7 +60,7 @@ export function DashboardLayout({ children, title }: { children: ReactNode; titl
   }
 
   return (
-    <div className="container mx-auto max-w-7xl px-3 lg:px-6 py-4 lg:py-6">
+    <div className="container mx-auto max-w-7xl px-3 sm:px-4 lg:px-6 py-4 lg:py-6 min-w-0 overflow-x-clip">
       <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-6">
         {/* Sidebar */}
         <aside className="hidden lg:flex lg:flex-col gap-2 sticky top-24 self-start">

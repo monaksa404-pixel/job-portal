@@ -63,6 +63,14 @@ export async function fetchJobById(id: string): Promise<Job | null> {
   return data ? normalizeJob(data as Job) : null;
 }
 
+export function formatDateTime(iso: string) {
+  const d = new Date(iso);
+  return {
+    date: d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }),
+    time: d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+  };
+}
+
 export function formatRelative(iso: string) {
   const d = new Date(iso).getTime();
   const diff = Date.now() - d;

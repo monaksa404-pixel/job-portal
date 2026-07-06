@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchRecentJobs } from "@/lib/queries";
+import { fetchRecentJobs, formatDateTime } from "@/lib/queries";
 import type { Application, Job } from "@/lib/types";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
 
@@ -77,9 +77,9 @@ function DashboardPage() {
                 const job = a.job;
                 const co = job ? getJobCompanyInfo(job) : null;
                 return (
-                <li key={a.id} className="py-3 flex items-start gap-3">
+                <li key={a.id} className="py-3 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 min-w-0">
                   <div className="flex-1 min-w-0 overflow-visible">
-                    <div className="font-semibold text-sm text-brand-navy truncate">{job?.title}</div>
+                    <div className="font-semibold text-sm text-brand-navy break-words">{job?.title}</div>
                     {co && (
                       <div className="mt-1.5">
                         <CompanyBrandRow
@@ -93,10 +93,13 @@ function DashboardPage() {
                       </div>
                     )}
                   </div>
-                  <StatusPill status={a.application_status} />
-                  <div className="hidden sm:block text-right shrink-0">
-                    <div className="text-[10px] text-muted-foreground">Applied on</div>
-                    <div className="text-xs font-semibold text-brand-navy">{new Date(a.created_at).toLocaleDateString()}</div>
+                  <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                    <StatusPill status={a.application_status} />
+                    <div className="text-right">
+                      <div className="text-[10px] text-muted-foreground">Applied</div>
+                      <div className="text-xs font-semibold text-brand-navy">{formatDateTime(a.created_at).date}</div>
+                      <div className="text-[10px] text-muted-foreground">{formatDateTime(a.created_at).time}</div>
+                    </div>
                   </div>
                 </li>
               );})}

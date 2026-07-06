@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Application, Job } from "@/lib/types";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
+import { formatDateTime } from "@/lib/queries";
 
 export const Route = createFileRoute("/my-applications")({
   head: () => ({ meta: [{ title: "My Applications — Job Expert" }] }),
@@ -47,9 +48,10 @@ function MyApplications() {
         ) : rows.map((r) => {
           const job = r.job;
           const co = job ? getJobCompanyInfo(job) : null;
+          const submitted = formatDateTime(r.created_at);
           return (
-            <div key={r.id} className="bg-white border border-border rounded-2xl p-4">
-              <div className="font-bold text-brand-navy truncate">{job?.title ?? "Job"}</div>
+            <div key={r.id} className="bg-white border border-border rounded-2xl p-4 min-w-0 overflow-hidden">
+              <div className="font-bold text-brand-navy break-words">{job?.title ?? "Job"}</div>
               {co && (
                 <div className="mt-2 overflow-visible">
                   <CompanyBrandRow
@@ -64,10 +66,13 @@ function MyApplications() {
               <div className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
                 {job?.location}
               </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2 min-w-0">
-                  <span className="text-[11px] text-muted-foreground flex items-center gap-1 shrink-0">
+              <div className="mt-3 flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2">
+                <div className="flex flex-col gap-1 min-w-0">
+                  <span className="text-[11px] text-muted-foreground flex items-center gap-1 flex-wrap">
                     <Clock className="w-3 h-3 shrink-0" />
+                    {submitted.date} · {submitted.time}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground break-all">
                     ID: {r.application_id} · Paid {r.amount_paid} SAR
                   </span>
                   <PaymentBadge status={r.payment_status} />

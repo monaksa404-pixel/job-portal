@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { fetchAdminApplicationsFull, openApplicationDoc, openAdminDocument } from "@/lib/admin-documents";
-import { Eye, FileText, Search } from "lucide-react";
+import { formatDateTime } from "@/lib/queries";
+import { Eye, FileText, Search, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/admin/documents")({
   head: () => ({ meta: [{ title: "User Applications & Data — Admin" }] }),
@@ -32,7 +33,7 @@ function AdminDocuments() {
       title="User Applications & Data"
       subtitle={`${rows.length} application(s) — full form data from users`}
       actions={
-        <div className="relative w-72">
+        <div className="relative w-full sm:w-64 lg:w-72">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, job…" className="w-full pl-10 pr-3 py-2 rounded-lg border border-border text-sm" />
         </div>
@@ -46,15 +47,21 @@ function AdminDocuments() {
             No applications yet. Data appears here when users submit the job application form.
           </div>
         )}
-        {filtered.map((r) => (
-          <div key={r.id} className="bg-white border border-border rounded-2xl p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="font-bold text-brand-navy text-lg">{r.full_name}</div>
-                <div className="text-sm text-muted-foreground">{r.email ?? "—"} · {r.phone}</div>
-                <div className="text-xs text-muted-foreground mt-1">ID: {r.application_id} · {r.job?.title ?? "Job"}</div>
+        {filtered.map((r) => {
+          const submitted = formatDateTime(r.created_at);
+          return (
+          <div key={r.id} className="bg-white border border-border rounded-2xl p-4 sm:p-5 min-w-0 overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-brand-navy text-lg break-words">{r.full_name}</div>
+                <div className="text-sm text-muted-foreground break-all">{r.email ?? "—"} · {r.phone}</div>
+                <div className="text-xs text-muted-foreground mt-1 break-words">ID: {r.application_id} · {r.job?.title ?? "Job"}</div>
+                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1 flex-wrap">
+                  <Clock className="w-3 h-3 shrink-0" />
+                  <span>{submitted.date} · {submitted.time}</span>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 shrink-0">
                 <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${r.payment_status === "verified" ? "bg-emerald-100 text-emerald-800" : r.payment_status === "rejected" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"}`}>
                   Payment {r.payment_status}
                 </span>
@@ -67,7 +74,7 @@ function AdminDocuments() {
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
               <Cell label="Nationality" v={r.nationality} />
               <Cell label="Location" v={r.current_location} />
               <Cell label="Gender" v={r.gender} />
@@ -115,7 +122,7 @@ function AdminDocuments() {
               ))}
             </div>
           </div>
-        ))}
+        );})}
       </div>
     </AdminLayout>
   );
@@ -123,9 +130,9 @@ function AdminDocuments() {
 
 function Cell({ label, v, mono }: { label: string; v: string | null | undefined; mono?: boolean }) {
   return (
-    <div>
+    <div className="min-w-0">
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`font-semibold text-brand-navy text-xs mt-0.5 ${mono ? "font-mono" : ""}`}>{v ?? "—"}</div>
+      <div className={`font-semibold text-brand-navy text-xs mt-0.5 break-words ${mono ? "font-mono break-all" : ""}`}>{v ?? "—"}</div>
     </div>
   );
 }

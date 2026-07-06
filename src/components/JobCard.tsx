@@ -40,9 +40,9 @@ export function JobCard({ job }: { job: Job }) {
       params={{ id: job.id }}
       className="block bg-white border border-border rounded-2xl p-4 hover:border-brand-blue/40 hover:shadow-md transition"
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 min-w-0">
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-brand-navy leading-snug text-base">{job.title}</h3>
+          <h3 className="font-bold text-brand-navy leading-snug text-base break-words">{job.title}</h3>
           <div className="mt-2 overflow-visible">
             <CompanyBrandRow
               name={co.name}
@@ -55,9 +55,9 @@ export function JobCard({ job }: { job: Job }) {
             <MapPin className="w-3 h-3 shrink-0" /> {job.location}
           </p>
         </div>
-        <div>
+        <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2 w-full sm:w-auto shrink-0">
           <JobSalaryDisplay job={job} size="sm" />
-          <button onClick={onToggle} aria-label="Save job" className="mt-1 inline-flex float-right">
+          <button onClick={onToggle} aria-label="Save job" className="sm:mt-1 inline-flex shrink-0">
             <Heart className={`w-4 h-4 ${saved ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />
           </button>
         </div>

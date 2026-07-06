@@ -109,14 +109,14 @@ export function AdminLayout({ children, title, subtitle, actions }: {
 
       <div className="lg:pl-64">
         {/* Topbar */}
-        <header className="sticky top-0 z-30 bg-white border-b border-border h-16 flex items-center px-4 lg:px-8 gap-4">
-          <button className="lg:hidden p-2" onClick={() => setMobileOpen(true)}><Menu className="w-5 h-5 text-brand-navy" /></button>
-          <div className="flex-1 min-w-0">
-            {title && <div className="font-extrabold text-brand-navy text-base lg:text-lg leading-tight truncate">{title}</div>}
-            {subtitle && <div className="text-xs text-muted-foreground truncate">{subtitle}</div>}
+        <header className="sticky top-0 z-30 bg-white border-b border-border flex flex-wrap items-center px-3 sm:px-4 lg:px-8 gap-2 sm:gap-3 py-2.5 lg:py-0 lg:h-16 lg:flex-nowrap">
+          <button className="lg:hidden p-2 shrink-0" onClick={() => setMobileOpen(true)}><Menu className="w-5 h-5 text-brand-navy" /></button>
+          <div className="flex-1 min-w-0 order-2 lg:order-none basis-[calc(100%-3rem)] lg:basis-auto">
+            {title && <div className="font-extrabold text-brand-navy text-sm sm:text-base lg:text-lg leading-tight break-words">{title}</div>}
+            {subtitle && <div className="text-[11px] sm:text-xs text-muted-foreground break-words">{subtitle}</div>}
           </div>
-          {actions}
-          <Link to="/admin/notifications" className="relative p-2 rounded-full hover:bg-secondary">
+          {actions && <div className="order-4 lg:order-none w-full sm:w-auto min-w-0 shrink">{actions}</div>}
+          <Link to="/admin/notifications" className="relative p-2 rounded-full hover:bg-secondary shrink-0 order-3 lg:order-none ml-auto lg:ml-0">
             <Bell className="w-5 h-5 text-brand-navy" />
             {unread > 0 && <span className="absolute top-0 right-0 min-w-[16px] h-[16px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">{unread}</span>}
           </Link>
@@ -128,7 +128,7 @@ export function AdminLayout({ children, title, subtitle, actions }: {
           </div>
         </header>
 
-        <main className="p-4 lg:p-8">{children}</main>
+        <main className="p-3 sm:p-4 lg:p-8 min-w-0 overflow-x-clip">{children}</main>
       </div>
     </div>
   );

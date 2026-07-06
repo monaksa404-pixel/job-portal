@@ -44,7 +44,7 @@ function ProfilePage() {
   }
 
   return (
-    <div className="bg-white border border-border rounded-2xl p-6">
+    <div className="bg-white border border-border rounded-2xl p-4 sm:p-6 min-w-0 overflow-hidden">
       <h1 className="text-2xl font-extrabold text-brand-navy flex items-center gap-2"><User className="w-5 h-5 text-brand-blue" /> Profile</h1>
       <p className="text-sm text-muted-foreground">Keep your personal information up to date.</p>
 

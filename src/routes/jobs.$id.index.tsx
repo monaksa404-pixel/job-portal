@@ -70,7 +70,7 @@ function JobDetailPage() {
 
   return (
     <div className="container mx-auto max-w-7xl px-4 lg:px-6 py-4 lg:py-6 pb-32">
-      <nav className="text-xs lg:text-sm text-muted-foreground mb-4">
+      <nav className="text-xs lg:text-sm text-muted-foreground mb-4 flex flex-wrap gap-y-1 break-words">
         <Link to="/">Home</Link>
         <span className="mx-2">›</span>
         <Link to="/jobs">Jobs</Link>
@@ -85,7 +85,7 @@ function JobDetailPage() {
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-2xl border border-border p-5 lg:p-6">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl lg:text-2xl font-extrabold text-brand-navy leading-tight">{job.title}</h1>
                 <div className="mt-2.5">
@@ -112,7 +112,7 @@ function JobDetailPage() {
                   <span className="text-xs text-muted-foreground">Posted {formatRelative(job.created_at)}</span>
                 </div>
               </div>
-              <div className="text-right shrink-0">
+              <div className="flex items-center justify-between sm:block sm:text-right shrink-0 w-full sm:w-auto">
                 <JobSalaryDisplay job={job} size="lg" />
                 <button type="button" onClick={onSaveToggle} aria-label="Save job" className="mt-2 inline-flex">
                   <Heart className={`w-5 h-5 ${saved ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />

@@ -138,9 +138,9 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-screen flex flex-col bg-background overflow-x-clip max-w-[100vw]">
         <Header />
-        <main className="flex-1 pb-20 lg:pb-0">
+        <main className="flex-1 pb-20 lg:pb-0 min-w-0 overflow-x-clip">
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
         </main>
