@@ -10,7 +10,7 @@ import { getJobSalaryMax, formatJobSalaryRange, cleanJobDescription, cleanJobRes
 type Category = { id: string; name: string };
 type Company = { id: string; name: string; logo_url: string | null; website: string | null; verified: boolean };
 type Form = {
-  title: string; category_id: string; job_type: string; employment_type: string;
+  title: string; category_id: string; job_types: string[]; employment_types: string[];
   location: string; salary_min: string; salary_max: string; salary_disclosed: boolean;
   description: string;
   rating: number; reviews_count: number;
@@ -25,7 +25,7 @@ type Form = {
 };
 
 const empty: Form = {
-  title: "", category_id: "", job_type: "Full-time", employment_type: "Permanent",
+  title: "", category_id: "", job_types: ["Full-time"], employment_types: ["Permanent"],
   location: "", salary_min: "", salary_max: "", salary_disclosed: true, description: "",
   rating: 4.5, reviews_count: 120,
   posted_by: "admin", company_id: "", edit_co_name: "", edit_co_logo: "", edit_co_website: "",
@@ -112,8 +112,8 @@ export function JobEditor({ jobId }: { jobId?: string }) {
         setF({
           title: j.title ?? "",
           category_id: j.category_id ?? "",
-          job_type: j.job_type ?? "Full-time",
-          employment_type: j.employment_type ?? "Permanent",
+          job_types: parseMultiOptions(j.job_type, "Full-time"),
+          employment_types: parseMultiOptions(j.employment_type, "Permanent"),
           location: j.location ?? "",
           salary_min: j.salary ? String(j.salary) : "",
           salary_max: maxSalary ? String(maxSalary) : "",
@@ -236,8 +236,8 @@ export function JobEditor({ jobId }: { jobId?: string }) {
       company_logo_url: companyLogo,
       company_website: companyWebsite,
       category_id: f.category_id || null,
-      job_type: f.job_type,
-      employment_type: f.employment_type,
+      job_type: formatMultiOptions(f.job_types),
+      employment_type: formatMultiOptions(f.employment_types),
       location: f.location.trim() || "Saudi Arabia",
       salary,
       salary_max,
@@ -271,6 +271,16 @@ export function JobEditor({ jobId }: { jobId?: string }) {
     }
     if (!f.category_id) {
       setErr("Job category is required.");
+      setBusy(false);
+      return;
+    }
+    if (!f.job_types.length) {
+      setErr("Select at least one job type.");
+      setBusy(false);
+      return;
+    }
+    if (!f.employment_types.length) {
+      setErr("Select at least one employment type.");
       setBusy(false);
       return;
     }
@@ -378,17 +388,17 @@ export function JobEditor({ jobId }: { jobId?: string }) {
                 </select>
               </Field>
               <Field label="Job Type *">
-                <OptionPicker
-                  value={f.job_type}
+                <MultiOptionPicker
+                  values={f.job_types}
                   options={["Full-time", "Part-time", "Contract", "Internship"]}
-                  onChange={(v) => setF({ ...f, job_type: v })}
+                  onChange={(v) => setF({ ...f, job_types: v })}
                 />
               </Field>
               <Field label="Employment Type *">
-                <OptionPicker
-                  value={f.employment_type}
+                <MultiOptionPicker
+                  values={f.employment_types}
                   options={["Permanent", "Temporary", "Seasonal"]}
-                  onChange={(v) => setF({ ...f, employment_type: v })}
+                  onChange={(v) => setF({ ...f, employment_types: v })}
                 />
               </Field>
               <Field label="Location *">
@@ -558,7 +568,10 @@ export function JobEditor({ jobId }: { jobId?: string }) {
               <div className="bg-secondary/40 rounded-2xl p-5">
                 <div className="text-xs uppercase tracking-wide text-muted-foreground">Preview</div>
                 <div className="mt-2 text-2xl font-extrabold text-brand-navy">{f.title || "Untitled job"}</div>
-                <div className="text-sm text-muted-foreground">{f.location || "Location"} · {cats.find((c) => c.id === f.category_id)?.name ?? "Category"} · {f.job_type}</div>
+                <div className="text-sm text-muted-foreground">{f.location || "Location"} · {cats.find((c) => c.id === f.category_id)?.name ?? "Category"} · {formatMultiOptions(f.job_types)}</div>
+                <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                  {f.employment_types.map((t) => <Pill key={t}>{t}</Pill>)}
+                </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
                   {f.salary_disclosed && (f.salary_min || f.salary_max) && (
                     <Pill>
@@ -608,45 +621,72 @@ export function JobEditor({ jobId }: { jobId?: string }) {
   );
 }
 
+function parseMultiOptions(raw: string | null | undefined, fallback: string): string[] {
+  const parts = String(raw ?? "")
+    .split(/,\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return parts.length ? parts : [fallback];
+}
+
+function formatMultiOptions(vals: string[]): string {
+  return vals.filter(Boolean).join(", ");
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div><label className="text-xs font-bold text-brand-navy">{label}</label><div className="mt-1.5">{children}</div></div>;
 }
 
-function OptionPicker({
-  value,
+function MultiOptionPicker({
+  values,
   options,
   onChange,
   placeholder = "Select",
 }: {
-  value: string;
+  values: string[];
   options: string[];
-  onChange: (v: string) => void;
+  onChange: (v: string[]) => void;
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const toggle = (opt: string) => {
+    if (values.includes(opt)) {
+      const next = values.filter((v) => v !== opt);
+      onChange(next);
+    } else {
+      onChange([...values, opt]);
+    }
+  };
+  const display = values.length ? formatMultiOptions(values) : placeholder;
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="inp text-left flex items-center justify-between gap-2">
-        <span className={value ? "text-brand-navy" : "text-muted-foreground"}>{value || placeholder}</span>
+      <button type="button" onClick={() => setOpen(true)} className="inp text-left flex items-center justify-between gap-2 min-w-0">
+        <span className={`truncate ${values.length ? "text-brand-navy" : "text-muted-foreground"}`}>{display}</span>
         <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
       </button>
       {open && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3 border-b border-border text-sm font-bold text-brand-navy">Select one or more</div>
             {options.map((opt) => {
-              const selected = value === opt;
+              const selected = values.includes(opt);
               return (
                 <button
                   key={opt}
                   type="button"
-                  onClick={() => { onChange(opt); setOpen(false); }}
-                  className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-brand-navy border-b border-border last:border-0 hover:bg-secondary/40"
+                  onClick={() => toggle(opt)}
+                  className={`w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-brand-navy border-b border-border last:border-0 hover:bg-secondary/40 ${selected ? "bg-brand-blue/5" : ""}`}
                 >
                   <span>{opt}</span>
-                  {selected ? <span className="text-base leading-none">✔️</span> : <span className="w-4" />}
+                  <span className={`w-6 h-6 rounded-md border flex items-center justify-center shrink-0 ${selected ? "border-brand-blue bg-brand-blue/10" : "border-border bg-white"}`}>
+                    {selected ? <span className="text-sm leading-none">✔️</span> : null}
+                  </span>
                 </button>
               );
             })}
+            <button type="button" onClick={() => setOpen(false)} className="w-full py-3.5 bg-brand-blue text-white text-sm font-semibold">
+              Done
+            </button>
           </div>
         </div>
       )}
