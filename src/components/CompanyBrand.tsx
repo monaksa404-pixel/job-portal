@@ -111,12 +111,12 @@ export function CompanyNameRow({
 }) {
   const site = formatWebsiteDisplay(website);
   return (
-    <div className="min-w-0 flex-1 overflow-visible">
-      <div className="flex items-center gap-1.5 min-w-0 overflow-visible">
-        <span className={`truncate min-w-0 ${nameClassName}`}>{name}</span>
-        {verified && <VerifiedBadge className="w-[18px] h-[18px] shrink-0" />}
+    <div className="min-w-0 flex-1 overflow-hidden">
+      <div className="flex items-start gap-1.5 min-w-0">
+        <span className={`break-words min-w-0 ${nameClassName}`}>{name}</span>
+        {verified && <VerifiedBadge className="w-[18px] h-[18px] shrink-0 mt-0.5" />}
       </div>
-      {site && <div className={`truncate mt-0.5 ${websiteClassName}`}>{site}</div>}
+      {site && <div className={`break-all mt-0.5 ${websiteClassName}`}>{site}</div>}
     </div>
   );
 }
@@ -139,7 +139,7 @@ export function CompanyBrandRow({
   websiteClassName?: string;
 }) {
   return (
-    <div className="flex items-start gap-2.5 min-w-0 overflow-visible">
+    <div className="flex items-start gap-2.5 min-w-0 w-full overflow-hidden">
       <CompanyLogoBox name={name} logoUrl={logoUrl} size={logoSize} />
       <CompanyNameRow
         name={name}

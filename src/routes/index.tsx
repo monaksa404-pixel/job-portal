@@ -43,7 +43,7 @@ function Index() {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 lg:px-6 py-4 lg:py-6">
+    <div className="container mx-auto max-w-7xl px-3 sm:px-4 lg:px-6 py-4 lg:py-6 min-w-0 overflow-x-clip">
       {/* HERO */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-navy-dark via-brand-navy to-brand-navy">
         <div
@@ -167,7 +167,7 @@ function Index() {
             note="Once your admin publishes jobs from the dashboard, they will appear here."
           />
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 min-w-0 [&>*]:min-w-0">
             {jobs.map((j) => <JobCard key={j.id} job={j} />)}
           </div>
         )}

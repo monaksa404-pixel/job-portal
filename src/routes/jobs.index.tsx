@@ -59,7 +59,7 @@ function JobsPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 lg:px-6 py-6">
+    <div className="container mx-auto max-w-7xl px-3 sm:px-4 lg:px-6 py-6 min-w-0 overflow-x-clip">
       <section className="rounded-3xl bg-gradient-to-br from-brand-navy-dark to-brand-navy p-6 lg:p-10 text-white">
         <h1 className="text-2xl lg:text-4xl font-extrabold">
           {activeCategory ? `${activeCategory} Jobs` : "All Jobs"}
@@ -107,7 +107,7 @@ function JobsPage() {
             note={urlSearch.q || urlSearch.location ? "Try different keywords or clear filters." : "Publish jobs from your admin dashboard and they'll show up here."}
           />
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 min-w-0 [&>*]:min-w-0">
             {jobs.map((j) => <JobCard key={j.id} job={j} />)}
           </div>
         )}

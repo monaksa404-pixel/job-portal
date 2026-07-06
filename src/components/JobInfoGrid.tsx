@@ -33,7 +33,7 @@ function JobInfoTile({
 
 export function JobInfoGrid({ job, compact }: { job: Job; compact?: boolean }) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 min-w-0 w-full">
       <JobInfoTile icon={Briefcase} label="Experience" value={job.experience_required} compact={compact} />
       <JobInfoTile icon={Clock} label="Duty Timing" value={job.duty_timing} compact={compact} />
       <JobInfoTile
