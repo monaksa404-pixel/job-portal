@@ -16,6 +16,7 @@ import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MyDocumentsRouteImport } from './routes/my-documents'
 import { Route as MyApplicationsRouteImport } from './routes/my-applications'
+import { Route as MyApplicationsIdRouteImport } from './routes/my-applications.$id'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -222,6 +223,11 @@ const AdminApplicationsIdRoute = AdminApplicationsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AdminApplicationsRoute,
 } as any)
+const MyApplicationsIdRoute = MyApplicationsIdRouteImport.update({
+  id: '/my-applications/$id',
+  path: '/my-applications/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminJobsIdEditRoute = AdminJobsIdEditRouteImport.update({
   id: '/$id/edit',
   path: '/$id/edit',
@@ -236,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/help': typeof HelpRoute
   '/messages': typeof MessagesRoute
   '/my-applications': typeof MyApplicationsRoute
+  '/my-applications/$id': typeof MyApplicationsIdRoute
   '/my-documents': typeof MyDocumentsRoute
   '/notifications': typeof NotificationsRoute
   '/payments': typeof PaymentsRoute
@@ -274,6 +281,7 @@ export interface FileRoutesByTo {
   '/help': typeof HelpRoute
   '/messages': typeof MessagesRoute
   '/my-applications': typeof MyApplicationsRoute
+  '/my-applications/$id': typeof MyApplicationsIdRoute
   '/my-documents': typeof MyDocumentsRoute
   '/notifications': typeof NotificationsRoute
   '/payments': typeof PaymentsRoute
@@ -311,6 +319,7 @@ export interface FileRoutesById {
   '/help': typeof HelpRoute
   '/messages': typeof MessagesRoute
   '/my-applications': typeof MyApplicationsRoute
+  '/my-applications/$id': typeof MyApplicationsIdRoute
   '/my-documents': typeof MyDocumentsRoute
   '/notifications': typeof NotificationsRoute
   '/payments': typeof PaymentsRoute
@@ -351,6 +360,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/messages'
     | '/my-applications'
+    | '/my-applications/$id'
     | '/my-documents'
     | '/notifications'
     | '/payments'
@@ -389,6 +399,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/messages'
     | '/my-applications'
+    | '/my-applications/$id'
     | '/my-documents'
     | '/notifications'
     | '/payments'
@@ -425,6 +436,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/messages'
     | '/my-applications'
+    | '/my-applications/$id'
     | '/my-documents'
     | '/notifications'
     | '/payments'
@@ -464,6 +476,7 @@ export interface RootRouteChildren {
   HelpRoute: typeof HelpRoute
   MessagesRoute: typeof MessagesRoute
   MyApplicationsRoute: typeof MyApplicationsRoute
+  MyApplicationsIdRoute: typeof MyApplicationsIdRoute
   MyDocumentsRoute: typeof MyDocumentsRoute
   NotificationsRoute: typeof NotificationsRoute
   PaymentsRoute: typeof PaymentsRoute
@@ -538,6 +551,13 @@ declare module '@tanstack/react-router' {
       path: '/my-applications'
       fullPath: '/my-applications'
       preLoaderRoute: typeof MyApplicationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-applications/$id': {
+      id: '/my-applications/$id'
+      path: '/my-applications/$id'
+      fullPath: '/my-applications/$id'
+      preLoaderRoute: typeof MyApplicationsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/messages': {
@@ -794,6 +814,7 @@ const rootRouteChildren: RootRouteChildren = {
   HelpRoute: HelpRoute,
   MessagesRoute: MessagesRoute,
   MyApplicationsRoute: MyApplicationsRoute,
+  MyApplicationsIdRoute: MyApplicationsIdRoute,
   MyDocumentsRoute: MyDocumentsRoute,
   NotificationsRoute: NotificationsRoute,
   PaymentsRoute: PaymentsRoute,
@@ -817,6 +838,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   JobsIndexRoute: JobsIndexRoute,
   ApplicationsSuccessApplicationIdRoute: ApplicationsSuccessApplicationIdRoute,
+  MyApplicationsIdRoute: MyApplicationsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

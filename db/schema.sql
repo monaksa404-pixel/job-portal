@@ -190,7 +190,7 @@ create table if not exists public.messages (
   is_read boolean not null default false,
   created_at timestamptz not null default now()
 );
-grant select, update on public.messages to authenticated;
+grant select, insert, update on public.messages to authenticated;
 grant all on public.messages to service_role;
 alter table public.messages enable row level security;
 create policy "Messages self read" on public.messages for select to authenticated using (auth.uid() = user_id);
@@ -207,7 +207,7 @@ create table if not exists public.notifications (
   is_read boolean not null default false,
   created_at timestamptz not null default now()
 );
-grant select, update on public.notifications to authenticated;
+grant select, insert, update on public.notifications to authenticated;
 grant all on public.notifications to service_role;
 alter table public.notifications enable row level security;
 create policy "Notifications self read" on public.notifications for select to authenticated using (auth.uid() = user_id);
@@ -224,7 +224,7 @@ create table if not exists public.popups (
   is_viewed boolean not null default false,
   created_at timestamptz not null default now()
 );
-grant select, update on public.popups to authenticated;
+grant select, insert, update on public.popups to authenticated;
 grant all on public.popups to service_role;
 alter table public.popups enable row level security;
 create policy "Popups self read" on public.popups for select to authenticated using (auth.uid() = user_id);
@@ -617,4 +617,14 @@ do $$ begin
   create policy "Applications admin update" on public.applications for update to authenticated
     using (public.has_role(auth.uid(), 'admin'))
     with check (public.has_role(auth.uid(), 'admin'));
+exception when duplicate_object then null; end $$;
+
+grant select, insert, update on public.messages to authenticated;
+grant select, insert, update on public.notifications to authenticated;
+grant select, insert, update on public.popups to authenticated;
+
+do $$ begin
+  create policy "Applications self update" on public.applications for update to authenticated
+    using (auth.uid() = user_id)
+    with check (auth.uid() = user_id);
 exception when duplicate_object then null; end $$;

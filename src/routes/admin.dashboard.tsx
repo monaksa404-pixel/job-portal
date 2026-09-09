@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { ADMIN_DASHBOARD_APP_SELECT } from "@/lib/admin-applications";
-import { Briefcase, FileText, Users as UsersIcon, Eye, Plus, Send, Pencil, MoreHorizontal, TrendingUp, Calendar } from "lucide-react";
+import { Briefcase, FileText, Users as UsersIcon, Eye, Plus, Send, Pencil, MoreHorizontal, Calendar } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, Area, AreaChart, PieChart, Pie, Cell } from "recharts";
 
 export const Route = createFileRoute("/admin/dashboard")({
@@ -15,6 +15,25 @@ type Stat = { jobs: number; apps: number; users: number; views: number };
 type RecentApp = { id: string; created_at: string; application_status: string; full_name: string; job?: { title: string; company_name: string; company?: { name: string } | null } | null };
 type RecentJob = { id: string; title: string; status: string; created_at: string; category?: { name: string } | null; company?: { name: string } | null; _count?: number };
 
+function isoDayStart(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x.toISOString();
+}
+function isoDayEnd(d: Date) {
+  const x = new Date(d);
+  x.setHours(23, 59, 59, 999);
+  return x.toISOString();
+}
+function ymd(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+type RangeKey = "all" | "7" | "30" | "custom";
+
 function AdminDashboard() {
   const [stat, setStat] = useState<Stat>({ jobs: 0, apps: 0, users: 0, views: 0 });
   const [trend, setTrend] = useState<{ d: string; v: number }[]>([]);
@@ -22,26 +41,60 @@ function AdminDashboard() {
   const [topCats, setTopCats] = useState<{ name: string; v: number }[]>([]);
   const [recentApps, setRecentApps] = useState<RecentApp[]>([]);
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>([]);
+  const [range, setRange] = useState<RangeKey>("all");
+  const [fromDate, setFromDate] = useState(ymd(new Date()));
+  const [toDate, setToDate] = useState(ymd(new Date()));
+
+  const bounds = (() => {
+    if (range === "all") return { start: null as string | null, end: null as string | null, label: "All time" };
+    if (range === "7") {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - 6);
+      return { start: isoDayStart(start), end: isoDayEnd(end), label: "Last 7 days" };
+    }
+    if (range === "30") {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - 29);
+      return { start: isoDayStart(start), end: isoDayEnd(end), label: "Last 30 days" };
+    }
+    const start = new Date(`${fromDate}T00:00:00`);
+    const end = new Date(`${toDate}T00:00:00`);
+    return { start: isoDayStart(start), end: isoDayEnd(end), label: `${fromDate} – ${toDate}` };
+  })();
 
   useEffect(() => {
     const load = async () => {
-      const [{ count: jobs }, { count: apps }, { count: users }] = await Promise.all([
-        supabase.from("jobs").select("id", { count: "exact", head: true }),
-        supabase.from("applications").select("id", { count: "exact", head: true }),
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
-      ]);
-      setStat({ jobs: jobs ?? 0, apps: apps ?? 0, users: users ?? 0, views: (jobs ?? 0) * 160 });
+      const countExact = async (table: string, start?: string | null, end?: string | null) => {
+        let q = supabase.from(table).select("id", { count: "exact" });
+        if (start) q = q.gte("created_at", start);
+        if (end) q = q.lte("created_at", end);
+        const { count, data, error } = await q;
+        if (error) return data?.length ?? 0;
+        return count ?? data?.length ?? 0;
+      };
 
-      // 7-day apps trend
+      const [jobs, apps, users] = await Promise.all([
+        countExact("jobs"),
+        countExact("applications", bounds.start, bounds.end),
+        countExact("profiles"),
+      ]);
+      setStat({ jobs, apps, users, views: jobs * 160 });
+
+      const spanEnd = bounds.end ? new Date(bounds.end) : new Date();
+      const spanStart = bounds.start ? new Date(bounds.start) : new Date(spanEnd.getTime() - 13 * 86400000);
+      const dayCount = Math.min(31, Math.max(1, Math.round((spanEnd.getTime() - spanStart.getTime()) / 86400000) + 1));
       const days: { d: string; v: number }[] = [];
-      const today = new Date();
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(today); d.setDate(today.getDate() - i);
-        const start = new Date(d); start.setHours(0,0,0,0);
-        const end = new Date(d); end.setHours(23,59,59,999);
-        const { count } = await supabase.from("applications").select("id", { count: "exact", head: true })
-          .gte("created_at", start.toISOString()).lte("created_at", end.toISOString());
-        days.push({ d: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }), v: count ?? 0 });
+      for (let i = dayCount - 1; i >= 0; i--) {
+        const d = new Date(spanEnd);
+        d.setDate(spanEnd.getDate() - i);
+        const { count, data } = await supabase.from("applications").select("id", { count: "exact" })
+          .gte("created_at", isoDayStart(d)).lte("created_at", isoDayEnd(d));
+        days.push({
+          d: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+          v: count ?? data?.length ?? 0,
+        });
       }
       setTrend(days);
 
@@ -64,9 +117,12 @@ function AdminDashboard() {
       setTopCats(Object.entries(cmap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, v]) => ({ name, v })));
 
       // recent apps
-      const { data: ra } = await supabase.from("applications")
+      let appsQ = supabase.from("applications")
         .select(ADMIN_DASHBOARD_APP_SELECT)
         .order("created_at", { ascending: false }).limit(5);
+      if (bounds.start) appsQ = appsQ.gte("created_at", bounds.start);
+      if (bounds.end) appsQ = appsQ.lte("created_at", bounds.end);
+      const { data: ra } = await appsQ;
       setRecentApps((ra ?? []) as unknown as RecentApp[]);
 
       // recent jobs
@@ -81,12 +137,31 @@ function AdminDashboard() {
       .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, load)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, []);
+  }, [bounds.start, bounds.end]);
 
   return (
     <AdminLayout title="Welcome back," subtitle="Admin User" actions={
-      <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary text-sm text-brand-navy">
-        <Calendar className="w-4 h-4" /> Last 7 Days
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-1.5">
+          <Calendar className="w-4 h-4 text-brand-navy shrink-0" />
+          <select
+            value={range}
+            onChange={(e) => setRange(e.target.value as RangeKey)}
+            className="px-2.5 py-2 rounded-lg border border-border bg-white text-sm text-brand-navy"
+          >
+            <option value="all">All time</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="custom">Custom dates</option>
+          </select>
+        </div>
+        {range === "custom" && (
+          <div className="flex items-center gap-1.5">
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="px-2 py-2 rounded-lg border border-border text-sm" />
+            <span className="text-xs text-muted-foreground">to</span>
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="px-2 py-2 rounded-lg border border-border text-sm" />
+          </div>
+        )}
       </div>
     }>
       {/* Stat cards */}
@@ -102,7 +177,7 @@ function AdminDashboard() {
         <div className="xl:col-span-2 bg-white rounded-2xl border border-border p-5">
           <div className="flex items-center justify-between">
             <div className="font-bold text-brand-navy">Applications Overview</div>
-            <div className="text-xs px-3 py-1.5 rounded-lg bg-secondary">Last 7 Days</div>
+            <div className="text-xs px-3 py-1.5 rounded-lg bg-secondary">{bounds.label}</div>
           </div>
           <div className="h-72 mt-3">
             <ResponsiveContainer>
@@ -250,11 +325,10 @@ function StatCard({ icon: Icon, label, value, tint }: { icon: typeof Briefcase; 
       <div className="flex items-center gap-3">
         <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${tint}`}><Icon className="w-5 h-5" /></div>
         <div>
-          <div className="text-2xl font-extrabold text-brand-navy leading-none">{value.toLocaleString()}</div>
+          <div className="text-2xl font-extrabold text-brand-navy leading-none">{(value ?? 0).toLocaleString()}</div>
           <div className="text-xs text-muted-foreground mt-1">{label}</div>
         </div>
       </div>
-      <div className="mt-3 text-[11px] text-emerald-600 font-semibold flex items-center gap-1"><TrendingUp className="w-3 h-3" /> vs last 30 days</div>
     </div>
   );
 }

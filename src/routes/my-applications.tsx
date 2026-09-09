@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Briefcase, Clock } from "lucide-react";
+import { Briefcase, Clock, CreditCard } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,10 +22,24 @@ function MyApplications() {
   useEffect(() => {
     if (!user) return;
     const load = async () => {
-      const { data } = await supabase.from("applications")
-        .select("*, job:jobs(*, company:companies(name, logo_url, website, verified))")
+      const { data, error } = await supabase.from("applications")
+        .select("*")
         .eq("user_id", user.id).order("created_at", { ascending: false });
-      setRows((data ?? []) as Row[]);
+      if (error) {
+        setRows([]);
+        return;
+      }
+      const list = (data ?? []) as Row[];
+      const jobIds = [...new Set(list.map((a) => a.job_id).filter(Boolean))];
+      if (jobIds.length) {
+        const { data: jobsData } = await supabase
+          .from("jobs")
+          .select("*, company:companies(name, logo_url, website, verified)")
+          .in("id", jobIds);
+        const map = new Map((jobsData ?? []).map((j) => [j.id, j as Job]));
+        for (const r of list) r.job = map.get(r.job_id) ?? null;
+      }
+      setRows(list);
     };
     load();
     const ch = supabase.channel(`apps-${user!.id}`)
@@ -51,6 +65,7 @@ function MyApplications() {
           const submitted = formatDateTime(r.created_at);
           return (
             <div key={r.id} className="bg-white border border-border rounded-2xl p-4 min-w-0 overflow-hidden">
+              <Link to="/my-applications/$id" params={{ id: r.id }} className="block min-w-0">
               <div className="font-bold text-brand-navy break-words">{job?.title ?? "Job"}</div>
               {co && (
                 <div className="mt-2 overflow-visible">
@@ -79,6 +94,16 @@ function MyApplications() {
                 </div>
                 <Badge status={r.application_status} />
               </div>
+              </Link>
+              {r.payment_status === "rejected" && (
+                <Link
+                  to="/my-applications/$id"
+                  params={{ id: r.id }}
+                  className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-blue text-white text-xs font-semibold"
+                >
+                  <CreditCard className="w-3.5 h-3.5" /> Pay Again
+                </Link>
+              )}
             </div>
           );
         })}

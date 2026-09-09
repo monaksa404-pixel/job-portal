@@ -59,9 +59,9 @@ function JobsPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl px-3 sm:px-4 lg:px-6 py-6 min-w-0 overflow-x-clip">
-      <section className="rounded-3xl bg-gradient-to-br from-brand-navy-dark to-brand-navy p-6 lg:p-10 text-white">
-        <h1 className="text-2xl lg:text-4xl font-extrabold">
+    <div className="container mx-auto max-w-7xl px-3 sm:px-4 lg:px-6 py-4 lg:py-6 min-w-0 overflow-x-clip">
+      <section className="rounded-2xl bg-gradient-to-br from-brand-navy-dark to-brand-navy p-4 sm:p-5 lg:p-8 text-white">
+        <h1 className="text-xl lg:text-3xl font-extrabold">
           {activeCategory ? `${activeCategory} Jobs` : "All Jobs"}
         </h1>
         <p className="mt-2 text-white/70 text-sm">

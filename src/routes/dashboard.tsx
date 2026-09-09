@@ -25,10 +25,24 @@ function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     const load = async () => {
-      const { data } = await supabase.from("applications")
-        .select("*, job:jobs(*, company:companies(name, logo_url, website, verified))")
+      const { data, error } = await supabase.from("applications")
+        .select("*")
         .eq("user_id", user.id).order("created_at", { ascending: false });
-      setApps((data ?? []) as AppRow[]);
+      if (error) {
+        setApps([]);
+        return;
+      }
+      const rows = (data ?? []) as AppRow[];
+      const jobIds = [...new Set(rows.map((a) => a.job_id).filter(Boolean))];
+      if (jobIds.length) {
+        const { data: jobsData } = await supabase
+          .from("jobs")
+          .select("*, company:companies(name, logo_url, website, verified)")
+          .in("id", jobIds);
+        const map = new Map((jobsData ?? []).map((j) => [j.id, j as Job]));
+        for (const r of rows) r.job = jobIds.length ? map.get(r.job_id) ?? null : r.job;
+      }
+      setApps(rows);
     };
     load();
     fetchRecentJobs(3).then(setJobs);
@@ -78,7 +92,7 @@ function DashboardPage() {
                 const co = job ? getJobCompanyInfo(job) : null;
                 return (
                 <li key={a.id} className="py-3 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 min-w-0">
-                  <div className="flex-1 min-w-0 overflow-visible">
+                  <Link to="/my-applications/$id" params={{ id: a.id }} className="flex-1 min-w-0 overflow-visible">
                     <div className="font-semibold text-sm text-brand-navy break-words">{job?.title}</div>
                     {co && (
                       <div className="mt-1.5">
@@ -92,7 +106,7 @@ function DashboardPage() {
                         />
                       </div>
                     )}
-                  </div>
+                  </Link>
                   <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
                     <StatusPill status={a.application_status} />
                     <div className="text-right">

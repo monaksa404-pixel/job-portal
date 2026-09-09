@@ -10,6 +10,7 @@ const navItems = [
   { to: "/categories", label: "Categories" },
   { to: "/jobs", label: "Jobs" },
   { to: "/my-applications", label: "My Applications" },
+  { to: "/messages", label: "Messages" },
   { to: "/notifications", label: "Notifications" },
 ] as const;
 
@@ -38,7 +39,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-border">
-      <div className="container mx-auto max-w-7xl px-4 lg:px-6 h-32 sm:h-36 md:h-44 lg:h-48 flex items-center justify-between">
+      <div className="container mx-auto max-w-7xl px-4 lg:px-6 h-16 sm:h-[4.5rem] flex items-center justify-between">
         <Logo />
 
         <nav className="hidden lg:flex items-center gap-8">
@@ -125,13 +126,21 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
-            <Link
-              to="/auth"
-              onClick={() => setOpen(false)}
-              className="mt-2 px-3 py-2.5 rounded-lg text-sm font-semibold text-white bg-brand-blue text-center"
-            >
-              Login / Register
-            </Link>
+            {user ? (
+              <>
+                <Link to="/dashboard" onClick={() => setOpen(false)} className="px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-secondary">Dashboard</Link>
+                <Link to="/messages" onClick={() => setOpen(false)} className="px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-secondary">Messages</Link>
+                <button type="button" onClick={async () => { await supabase.auth.signOut(); setOpen(false); }} className="px-3 py-2.5 rounded-lg text-sm font-medium text-rose-600 text-left">Sign out</button>
+              </>
+            ) : (
+              <Link
+                to="/auth"
+                onClick={() => setOpen(false)}
+                className="mt-2 px-3 py-2.5 rounded-lg text-sm font-semibold text-white bg-brand-blue text-center"
+              >
+                Login / Register
+              </Link>
+            )}
           </nav>
         </div>
       )}

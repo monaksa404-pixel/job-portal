@@ -19,12 +19,16 @@ export function PopupListener() {
       if (data && data[0]) setPopup(data[0] as Popup);
     };
     load();
+    const interval = window.setInterval(load, 8000);
     const ch = supabase.channel(`popups-${user.id}`)
       .on("postgres_changes",
-        { event: "INSERT", schema: "public", table: "popups", filter: `user_id=eq.${user.id}` },
-        (payload) => setPopup(payload.new as Popup))
+        { event: "*", schema: "public", table: "popups", filter: `user_id=eq.${user.id}` },
+        () => load())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      window.clearInterval(interval);
+      supabase.removeChannel(ch);
+    };
   }, [user]);
 
   async function dismiss() {
@@ -35,7 +39,7 @@ export function PopupListener() {
 
   if (!popup) return null;
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[200] bg-black/40 flex items-center justify-center p-4">
       <div className="relative w-full max-w-md bg-white rounded-2xl p-6 text-center shadow-2xl">
         <button onClick={dismiss} className="absolute top-3 right-3 p-1 rounded-full hover:bg-secondary">
           <X className="w-4 h-4" />
@@ -46,9 +50,9 @@ export function PopupListener() {
         <h2 className="mt-4 text-xl font-extrabold text-brand-navy">{popup.title || "Good News!"}</h2>
         <p className="mt-2 text-sm text-foreground/80">{popup.message}</p>
         <div className="mt-5 flex gap-3">
-          <Link to="/my-applications" onClick={dismiss}
+          <Link to="/messages" onClick={dismiss}
             className="flex-1 py-2.5 rounded-xl bg-brand-blue text-white font-semibold text-sm">
-            View Details
+            View Message
           </Link>
           <button onClick={dismiss}
             className="flex-1 py-2.5 rounded-xl border border-border font-semibold text-sm text-brand-navy">

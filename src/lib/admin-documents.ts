@@ -45,13 +45,19 @@ export type AdminDocumentRow = {
   application_id?: string;
 };
 
-const APP_SELECT =
-  "id, application_id, user_id, full_name, email, phone, nationality, current_location, gender, date_of_birth, marital_status, in_saudi_arabia, iqama_status, iqama_profession, iqama_number, iqama_expiry, experience, recharge_pin, amount_paid, payment_status, application_status, cv_url, passport_url, created_at, job:jobs(title)";
-
 export async function fetchAdminApplicationsFull(): Promise<{ rows: AdminApplicationFull[]; error: string | null }> {
-  const { data, error } = await supabase.from("applications").select(APP_SELECT).order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("applications").select("*").order("created_at", { ascending: false });
   if (error) return { rows: [], error: error.message };
   const rows = (data ?? []) as unknown as AdminApplicationFull[];
+  const jobIds = [...new Set(rows.map((r) => (r as unknown as { job_id?: string }).job_id).filter(Boolean))] as string[];
+  if (jobIds.length) {
+    const { data: jobs } = await supabase.from("jobs").select("id, title").in("id", jobIds);
+    const byJob = new Map((jobs ?? []).map((j) => [j.id, j.title as string]));
+    for (const r of rows) {
+      const jid = (r as unknown as { job_id?: string }).job_id;
+      r.job = jid && byJob.has(jid) ? { title: byJob.get(jid)! } : r.job ?? null;
+    }
+  }
   const userIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean))];
   if (userIds.length) {
     const { data: docs } = await supabase.from("user_documents").select("id, user_id, kind, name, url").in("user_id", userIds);

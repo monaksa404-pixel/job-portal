@@ -59,6 +59,13 @@ function AdminNotifications() {
       const rows = targets.map((id) => ({ user_id: id, title: basePayload.title, message: basePayload.message }));
       const { error } = await supabase.from("popups").insert(rows);
       if (error) { setErr(error.message); setSending(false); return; }
+      const notifs = targets.map((id) => ({
+        user_id: id,
+        title: basePayload.title,
+        message: basePayload.message,
+        type: "system",
+      }));
+      await supabase.from("notifications").insert(notifs);
     } else {
       for (const id of targets) {
         let attachment_url: string | null = null;
@@ -93,6 +100,14 @@ function AdminNotifications() {
             attachment_name,
           });
           if (error) { setErr(error.message); setSending(false); return; }
+          await supabase.from("notifications").insert({
+            user_id: id,
+            title: basePayload.title,
+            message: basePayload.message,
+            type: "info",
+            attachment_url,
+            attachment_name,
+          });
         }
       }
     }

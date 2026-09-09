@@ -9,7 +9,7 @@ import {
 import { ShareJobButtons } from "@/components/ShareJobButtons";
 import { JobInfoGrid } from "@/components/JobInfoGrid";
 import { JobSalaryDisplay } from "@/components/JobSalaryDisplay";
-import { fetchJobById, formatRelative } from "@/lib/queries";
+import { fetchJobById } from "@/lib/queries";
 import { prepareJobView } from "@/lib/job-salary";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
 import { useAuth } from "@/hooks/use-auth";
@@ -109,7 +109,6 @@ function JobDetailPage() {
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Tag tone="emerald">{job.job_type}</Tag>
                   <Tag tone="blue">{job.work_mode}</Tag>
-                  <span className="text-xs text-muted-foreground">Posted {formatRelative(job.created_at)}</span>
                 </div>
               </div>
               <div className="flex items-center justify-between sm:block sm:text-right shrink-0 w-full sm:w-auto">

@@ -12,7 +12,7 @@ export function Logo({ className, imgClassName }: LogoProps) {
       <img
         src={logoImage}
         alt="Job Expert"
-        className={imgClassName ?? "h-44 w-auto object-contain sm:h-52 md:h-64 lg:h-80"}
+        className={imgClassName ?? "h-10 w-auto object-contain sm:h-11 md:h-12"}
       />
     </Link>
   );

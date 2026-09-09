@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import type { Job } from "@/lib/types";
 import { JobInfoGrid } from "@/components/JobInfoGrid";
 import { JobSalaryDisplay } from "@/components/JobSalaryDisplay";
-import { formatRelative } from "@/lib/queries";
 import { useAuth } from "@/hooks/use-auth";
 import { isJobSaved, toggleSaveJob } from "@/lib/saved";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
@@ -68,8 +67,6 @@ export function JobCard({ job }: { job: Job }) {
       <div className="mt-3 min-w-0">
         <JobInfoGrid job={job} compact />
       </div>
-
-      <div className="mt-2 text-[11px] text-muted-foreground break-words">{formatRelative(job.created_at)}</div>
     </Link>
   );
 }

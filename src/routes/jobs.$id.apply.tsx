@@ -164,7 +164,7 @@ function ApplyPage() {
           {step === 0 && <StepPersonal form={form} set={set} />}
           {step === 1 && <StepExperience form={form} set={set} />}
           {step === 2 && <StepDocuments form={form} set={set} />}
-          {step === 3 && <StepPayment form={form} set={set} job={job} />}
+          {step === 3 && <StepPayment form={form} set={set} job={job} onPay={submit} submitting={submitting} />}
 
           <div className="flex items-center justify-between gap-3">
             {step > 0 ? (
@@ -183,21 +183,13 @@ function ApplyPage() {
               </Link>
             )}
             {step < 3 ? (
-              <button
-                onClick={() => setStep((s) => s + 1)}
-                className="px-6 py-3 rounded-xl bg-brand-blue text-white text-sm font-semibold flex items-center gap-2"
-              >
-                Save &amp; Continue <ChevronRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                onClick={submit}
-                disabled={submitting || !form.recharge_pin}
-                className="px-6 py-3 rounded-xl bg-brand-navy text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"
-              >
-                <Lock className="w-4 h-4" /> {submitting ? "Submitting…" : `Pay ${job.application_fee} SAR & Submit Application`}
-              </button>
-            )}
+            <button
+              onClick={() => setStep((s) => s + 1)}
+              className="px-5 py-2.5 rounded-xl bg-brand-blue text-white text-sm font-semibold flex items-center gap-2"
+            >
+              Save &amp; Continue <ChevronRight className="w-4 h-4" />
+            </button>
+          ) : null}
           </div>
         </div>
 
@@ -520,7 +512,7 @@ function StepDocuments({ form, set }: { form: FormState; set: <K extends keyof F
   );
 }
 
-function StepPayment({ form, set, job }: { form: FormState; set: <K extends keyof FormState>(k: K, v: FormState[K]) => void; job: Job }) {
+function StepPayment({ form, set, job, onPay, submitting }: { form: FormState; set: <K extends keyof FormState>(k: K, v: FormState[K]) => void; job: Job; onPay: () => void; submitting: boolean }) {
   const co = getJobCompanyInfo(job);
   return (
     <>
@@ -569,6 +561,14 @@ function StepPayment({ form, set, job }: { form: FormState; set: <K extends keyo
             <Info className="w-4 h-4 text-brand-blue shrink-0" />
             You can find your STC Recharge PIN on any STC recharge card or from STC services.
           </div>
+          <button
+            type="button"
+            onClick={onPay}
+            disabled={submitting || !form.recharge_pin}
+            className="mt-4 inline-flex items-center justify-center gap-1.5 px-5 py-2 rounded-lg bg-brand-blue text-white text-sm font-semibold disabled:opacity-60"
+          >
+            <Lock className="w-4 h-4" /> {submitting ? "Submitting…" : `Pay ${job.application_fee} SAR`}
+          </button>
           <div className="mt-3 bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-xs text-foreground/80 flex gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
             <div>
