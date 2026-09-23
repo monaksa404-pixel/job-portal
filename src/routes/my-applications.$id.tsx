@@ -1,12 +1,11 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Clock, CreditCard } from "lucide-react";
+import { ArrowLeft, CreditCard } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Application, Job } from "@/lib/types";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
-import { formatDateTime } from "@/lib/queries";
 import { notifyTelegram } from "@/lib/telegram.functions";
 
 export const Route = createFileRoute("/my-applications/$id")({
@@ -20,6 +19,7 @@ function ApplicationDetail() {
   const { id } = useParams({ from: "/my-applications/$id" });
   const { user } = useAuth();
   const [row, setRow] = useState<Row | null>(null);
+  const [missing, setMissing] = useState(false);
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -27,21 +27,27 @@ function ApplicationDetail() {
 
   const load = async () => {
     if (!user) return;
-    const { data } = await supabase.from("applications")
+    const { data, error } = await supabase.from("applications")
       .select("*")
       .eq("id", id)
       .eq("user_id", user.id)
       .maybeSingle();
-    const row = (data as Row) ?? null;
-    if (row?.job_id) {
+    if (error || !data) {
+      setMissing(true);
+      setRow(null);
+      return;
+    }
+    const next = data as Row;
+    if (next.job_id) {
       const { data: job } = await supabase
         .from("jobs")
         .select("*, company:companies(name, logo_url, website, verified)")
-        .eq("id", row.job_id)
+        .eq("id", next.job_id)
         .maybeSingle();
-      row.job = (job as Job) ?? null;
+      next.job = (job as Job) ?? null;
     }
-    setRow(row);
+    setMissing(false);
+    setRow(next);
   };
 
   useEffect(() => { load(); }, [user, id]);
@@ -57,7 +63,9 @@ function ApplicationDetail() {
       payment_status: "pending",
     }).eq("id", row.id).eq("user_id", user.id);
     if (error) {
-      setErr(error.message);
+      setErr(error.message.includes("policy") || error.message.includes("permission")
+        ? "Could not update payment. Run the SQL grant for applications self-update in Supabase."
+        : error.message);
       setBusy(false);
       return;
     }
@@ -72,11 +80,21 @@ function ApplicationDetail() {
     load();
   }
 
+  if (missing) {
+    return (
+      <div className="space-y-3">
+        <Link to="/my-applications" className="inline-flex items-center gap-1 text-sm text-brand-blue">
+          <ArrowLeft className="w-4 h-4" /> Back to My Applications
+        </Link>
+        <div className="text-sm text-muted-foreground">Application not found.</div>
+      </div>
+    );
+  }
+
   if (!row) return <div className="text-sm text-muted-foreground">Loading…</div>;
 
   const job = row.job;
   const co = job ? getJobCompanyInfo(job) : null;
-  const submitted = formatDateTime(row.created_at);
 
   return (
     <div className="space-y-4 min-w-0">
@@ -91,9 +109,7 @@ function ApplicationDetail() {
             <CompanyBrandRow name={co.name} logoUrl={co.logoUrl} verified={co.verified} website={co.website} logoSize="xs" />
           </div>
         )}
-        <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
-          <Clock className="w-3 h-3 shrink-0" /> Applied {submitted.date} · {submitted.time}
-        </div>
+        {job?.location && <div className="mt-2 text-xs text-muted-foreground">{job.location}</div>}
         <div className="mt-3 flex flex-wrap gap-2">
           <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${row.payment_status === "verified" ? "bg-emerald-100 text-emerald-800" : row.payment_status === "rejected" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"}`}>
             Payment {row.payment_status}

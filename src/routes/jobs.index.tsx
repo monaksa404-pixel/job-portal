@@ -15,9 +15,9 @@ type JobsSearch = {
 
 export const Route = createFileRoute("/jobs/")({
   validateSearch: (search: Record<string, unknown>): JobsSearch => ({
-    q: typeof search.q === "string" ? search.q : "",
-    category: typeof search.category === "string" ? search.category : "",
-    location: typeof search.location === "string" ? search.location : "",
+    q: typeof search.q === "string" ? search.q : undefined,
+    category: typeof search.category === "string" ? search.category : undefined,
+    location: typeof search.location === "string" ? search.location : undefined,
   }),
   head: () => ({
     meta: [
@@ -31,8 +31,12 @@ export const Route = createFileRoute("/jobs/")({
 function JobsPage() {
   const navigate = useNavigate();
   const urlSearch = Route.useSearch();
-  const q = useQuery({ queryKey: ["all-jobs"], queryFn: fetchAllJobs });
-  const catsQ = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
+  const q = useQuery({
+    queryKey: ["all-jobs"],
+    queryFn: fetchAllJobs,
+    staleTime: 30_000,
+  });
+  const catsQ = useQuery({ queryKey: ["categories"], queryFn: fetchCategories, staleTime: 60_000 });
   const [keyword, setKeyword] = useState(urlSearch.q ?? "");
   const [location, setLocation] = useState(urlSearch.location ?? "");
 
@@ -41,10 +45,12 @@ function JobsPage() {
     setLocation(urlSearch.location ?? "");
   }, [urlSearch.q, urlSearch.location]);
 
-  const jobs = filterJobs(q.data ?? [], urlSearch.q ?? "", urlSearch.category ?? "", urlSearch.location);
-  const activeCategory = urlSearch.category
-    ? (catsQ.data ?? []).find((c) => c.id === urlSearch.category)?.name
+  const categoryId = urlSearch.category?.trim() || "";
+  const jobs = filterJobs(q.data ?? [], urlSearch.q ?? "", categoryId || undefined, urlSearch.location);
+  const activeCategory = categoryId
+    ? (catsQ.data ?? []).find((c) => c.id === categoryId)?.name
     : null;
+  const hasFilter = !!(urlSearch.q || categoryId || urlSearch.location);
 
   function runSearch(e?: React.FormEvent) {
     e?.preventDefault();
@@ -52,7 +58,7 @@ function JobsPage() {
       to: "/jobs",
       search: {
         q: keyword.trim() || undefined,
-        category: urlSearch.category || undefined,
+        category: categoryId || undefined,
         location: location.trim() || undefined,
       },
     });
@@ -65,11 +71,13 @@ function JobsPage() {
           {activeCategory ? `${activeCategory} Jobs` : "All Jobs"}
         </h1>
         <p className="mt-2 text-white/70 text-sm">
-          {activeCategory
-            ? `${jobs.length} job(s) in this category.`
-            : `Find your next opportunity from ${q.data?.length ?? 0} open positions.`}
+          {q.isLoading
+            ? "Loading jobs…"
+            : activeCategory
+              ? `${jobs.length} job(s) in this category.`
+              : `Find your next opportunity from ${q.data?.length ?? 0} open positions.`}
         </p>
-        {activeCategory && (
+        {!!categoryId && (
           <button
             type="button"
             onClick={() => navigate({ to: "/jobs", search: { q: urlSearch.q || undefined, location: urlSearch.location || undefined } })}
@@ -101,10 +109,19 @@ function JobsPage() {
       </section>
 
       <section className="mt-8">
-        {jobs.length === 0 ? (
+        {q.isLoading ? (
+          <div className="bg-white border border-border rounded-2xl py-12 text-center text-sm text-muted-foreground">
+            Loading jobs…
+          </div>
+        ) : q.isError ? (
           <EmptyState
-            title={urlSearch.q || urlSearch.location ? "No jobs match your search" : "No jobs available"}
-            note={urlSearch.q || urlSearch.location ? "Try different keywords or clear filters." : "Publish jobs from your admin dashboard and they'll show up here."}
+            title="Could not load jobs"
+            note="Please refresh the page and try again."
+          />
+        ) : jobs.length === 0 ? (
+          <EmptyState
+            title={hasFilter ? "No jobs match your search" : "No jobs available"}
+            note={hasFilter ? "Try a different category or clear filters." : "Publish jobs from your admin dashboard and they'll show up here."}
           />
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 min-w-0 [&>*]:min-w-0">

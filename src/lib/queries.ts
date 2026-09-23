@@ -20,10 +20,14 @@ export async function fetchCategories(): Promise<Category[]> {
 
 export async function fetchCategoriesWithCounts(): Promise<Category[]> {
   const cats = await fetchCategories();
-  const { data: counts } = await supabase
+  const { data: counts, error } = await supabase
     .from("jobs")
     .select("category_id")
     .eq("status", "active");
+  if (error) {
+    console.warn("category job counts failed:", error.message);
+    return cats.map((c) => ({ ...c, jobs_count: c.jobs_count ?? 0 }));
+  }
   const map = new Map<string, number>();
   (counts ?? []).forEach((r: { category_id: string | null }) => {
     if (!r.category_id) return;

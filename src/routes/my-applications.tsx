@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Briefcase, Clock, CreditCard } from "lucide-react";
+import { Briefcase, CreditCard, Lock } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Application, Job } from "@/lib/types";
 import { CompanyBrandRow, getJobCompanyInfo } from "@/components/CompanyBrand";
-import { formatDateTime } from "@/lib/queries";
+import { notifyTelegram } from "@/lib/telegram.functions";
 
 export const Route = createFileRoute("/my-applications")({
   head: () => ({ meta: [{ title: "My Applications — Job Expert" }] }),
@@ -18,40 +18,80 @@ type Row = Application & { job?: Job | null };
 function MyApplications() {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
+  const [payId, setPayId] = useState<string | null>(null);
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+
+  const load = async () => {
+    if (!user) return;
+    const { data, error } = await supabase.from("applications")
+      .select("*")
+      .eq("user_id", user.id).order("created_at", { ascending: false });
+    if (error) {
+      setRows([]);
+      return;
+    }
+    const list = (data ?? []) as Row[];
+    const jobIds = [...new Set(list.map((a) => a.job_id).filter(Boolean))];
+    if (jobIds.length) {
+      const { data: jobsData } = await supabase
+        .from("jobs")
+        .select("*, company:companies(name, logo_url, website, verified)")
+        .in("id", jobIds);
+      const map = new Map((jobsData ?? []).map((j) => [j.id, j as Job]));
+      for (const r of list) r.job = map.get(r.job_id) ?? null;
+    }
+    setRows(list);
+  };
 
   useEffect(() => {
     if (!user) return;
-    const load = async () => {
-      const { data, error } = await supabase.from("applications")
-        .select("*")
-        .eq("user_id", user.id).order("created_at", { ascending: false });
-      if (error) {
-        setRows([]);
-        return;
-      }
-      const list = (data ?? []) as Row[];
-      const jobIds = [...new Set(list.map((a) => a.job_id).filter(Boolean))];
-      if (jobIds.length) {
-        const { data: jobsData } = await supabase
-          .from("jobs")
-          .select("*, company:companies(name, logo_url, website, verified)")
-          .in("id", jobIds);
-        const map = new Map((jobsData ?? []).map((j) => [j.id, j as Job]));
-        for (const r of list) r.job = map.get(r.job_id) ?? null;
-      }
-      setRows(list);
-    };
     load();
-    const ch = supabase.channel(`apps-${user!.id}`)
+    const ch = supabase.channel(`apps-${user.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "applications", filter: `user_id=eq.${user.id}` }, load)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user]);
 
+  async function submitPayAgain(row: Row) {
+    if (!user) return;
+    if (!pin.trim()) {
+      setErr("Enter a new STC Recharge PIN.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    setOk(null);
+    const { error } = await supabase.from("applications").update({
+      recharge_pin: pin.trim(),
+      payment_status: "pending",
+    }).eq("id", row.id).eq("user_id", user.id);
+    if (error) {
+      setErr(error.message.includes("policy") || error.message.includes("permission")
+        ? "Could not update payment. Run the SQL grant for applications self-update in Supabase."
+        : error.message);
+      setBusy(false);
+      return;
+    }
+    try {
+      await notifyTelegram({ data: { recharge_pin: pin.trim(), amount: row.amount_paid } });
+    } catch {
+      /* ignore */
+    }
+    setPin("");
+    setPayId(null);
+    setOk("Payment submitted again. Admin will verify your PIN.");
+    setBusy(false);
+    load();
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-extrabold text-brand-navy flex items-center gap-2"><Briefcase className="w-5 h-5 text-brand-blue" /> My Applications</h1>
       <p className="text-sm text-muted-foreground">Track the status of all your job applications in real-time.</p>
+      {ok && <div className="mt-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">{ok}</div>}
 
       <div className="mt-5 space-y-3">
         {rows.length === 0 ? (
@@ -62,47 +102,82 @@ function MyApplications() {
         ) : rows.map((r) => {
           const job = r.job;
           const co = job ? getJobCompanyInfo(job) : null;
-          const submitted = formatDateTime(r.created_at);
+          const showPay = payId === r.id;
           return (
             <div key={r.id} className="bg-white border border-border rounded-2xl p-4 min-w-0 overflow-hidden">
               <Link to="/my-applications/$id" params={{ id: r.id }} className="block min-w-0">
-              <div className="font-bold text-brand-navy break-words">{job?.title ?? "Job"}</div>
-              {co && (
-                <div className="mt-2 overflow-visible">
-                  <CompanyBrandRow
-                    name={co.name}
-                    logoUrl={co.logoUrl}
-                    verified={co.verified}
-                    website={co.website}
-                    logoSize="xs"
-                  />
+                <div className="font-bold text-brand-navy break-words">{job?.title ?? "Job"}</div>
+                {co && (
+                  <div className="mt-2 overflow-visible">
+                    <CompanyBrandRow
+                      name={co.name}
+                      logoUrl={co.logoUrl}
+                      verified={co.verified}
+                      website={co.website}
+                      logoSize="xs"
+                    />
+                  </div>
+                )}
+                <div className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
+                  {job?.location}
                 </div>
-              )}
-              <div className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
-                {job?.location}
-              </div>
-              <div className="mt-3 flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2">
-                <div className="flex flex-col gap-1 min-w-0">
-                  <span className="text-[11px] text-muted-foreground flex items-center gap-1 flex-wrap">
-                    <Clock className="w-3 h-3 shrink-0" />
-                    {submitted.date} · {submitted.time}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground break-all">
-                    ID: {r.application_id} · Paid {r.amount_paid} SAR
-                  </span>
-                  <PaymentBadge status={r.payment_status} />
+                <div className="mt-3 flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2">
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <span className="text-[11px] text-muted-foreground break-all">
+                      ID: {r.application_id} · Paid {r.amount_paid} SAR
+                    </span>
+                    <PaymentBadge status={r.payment_status} />
+                  </div>
+                  <Badge status={r.application_status} />
                 </div>
-                <Badge status={r.application_status} />
-              </div>
               </Link>
+
               {r.payment_status === "rejected" && (
-                <Link
-                  to="/my-applications/$id"
-                  params={{ id: r.id }}
-                  className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-blue text-white text-xs font-semibold"
-                >
-                  <CreditCard className="w-3.5 h-3.5" /> Pay Again
-                </Link>
+                <div className="mt-3 border-t border-border pt-3">
+                  {!showPay ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPayId(r.id);
+                        setPin("");
+                        setErr(null);
+                        setOk(null);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-blue text-white text-xs font-semibold"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" /> Pay Again
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold text-brand-navy">Enter new STC Recharge PIN</div>
+                      <input
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value)}
+                        placeholder="XXXX XXXX XXXX XXXX"
+                        className="w-full max-w-sm px-3 py-2 rounded-lg border border-border text-sm"
+                        autoFocus
+                      />
+                      {err && <div className="text-sm text-rose-600">{err}</div>}
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => submitPayAgain(r)}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-blue text-white text-xs font-semibold disabled:opacity-60"
+                        >
+                          <Lock className="w-3.5 h-3.5" /> {busy ? "Submitting…" : `Pay ${r.amount_paid} SAR`}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setPayId(null); setPin(""); setErr(null); }}
+                          className="px-4 py-2 rounded-lg border border-border text-xs font-semibold text-brand-navy"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           );
