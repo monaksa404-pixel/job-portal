@@ -167,6 +167,11 @@ create table if not exists public.applications (
   amount_paid numeric not null default 0,
   payment_status public.payment_status not null default 'pending',
   application_status public.application_status not null default 'under_review',
+  extra_payment_enabled boolean not null default false,
+  extra_payment_amount numeric not null default 0,
+  extra_payment_reason text,
+  extra_recharge_pin text,
+  extra_payment_status text default null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

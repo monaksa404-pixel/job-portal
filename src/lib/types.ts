@@ -77,6 +77,11 @@ export type Application = {
   payment_status: "pending" | "verified" | "rejected";
   amount_paid: number;
   recharge_pin: string;
+  extra_payment_enabled?: boolean | null;
+  extra_payment_amount?: number | null;
+  extra_payment_reason?: string | null;
+  extra_recharge_pin?: string | null;
+  extra_payment_status?: "pending" | "under_verification" | "verified" | "rejected" | null;
   created_at: string;
   job?: Job;
 };
