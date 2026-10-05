@@ -42,6 +42,7 @@ import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
 import { Route as AdminApplicationsRouteImport } from './routes/admin.applications'
 import { Route as JobsIdIndexRouteImport } from './routes/jobs.$id.index'
 import { Route as AdminJobsIndexRouteImport } from './routes/admin.jobs.index'
+import { Route as AdminApplicationsIndexRouteImport } from './routes/admin.applications.index'
 import { Route as JobsIdApplyRouteImport } from './routes/jobs.$id.apply'
 import { Route as ApplicationsSuccessApplicationIdRouteImport } from './routes/applications.success.$applicationId'
 import { Route as AdminJobsNewRouteImport } from './routes/admin.jobs.new'
@@ -213,6 +214,11 @@ const AdminJobsIndexRoute = AdminJobsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminJobsRoute,
 } as any)
+const AdminApplicationsIndexRoute = AdminApplicationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminApplicationsRoute,
+} as any)
 const JobsIdApplyRoute = JobsIdApplyRouteImport.update({
   id: '/apply',
   path: '/apply',
@@ -276,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/admin/jobs/new': typeof AdminJobsNewRoute
   '/applications/success/$applicationId': typeof ApplicationsSuccessApplicationIdRoute
   '/jobs/$id/apply': typeof JobsIdApplyRoute
+  '/admin/applications/': typeof AdminApplicationsIndexRoute
   '/admin/jobs/': typeof AdminJobsIndexRoute
   '/jobs/$id/': typeof JobsIdIndexRoute
   '/admin/jobs/$id/edit': typeof AdminJobsIdEditRoute
@@ -294,7 +301,6 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/saved-jobs': typeof SavedJobsRoute
   '/settings': typeof SettingsRoute
-  '/admin/applications': typeof AdminApplicationsRouteWithChildren
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/companies': typeof AdminCompaniesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -314,6 +320,7 @@ export interface FileRoutesByTo {
   '/admin/jobs/new': typeof AdminJobsNewRoute
   '/applications/success/$applicationId': typeof ApplicationsSuccessApplicationIdRoute
   '/jobs/$id/apply': typeof JobsIdApplyRoute
+  '/admin/applications': typeof AdminApplicationsIndexRoute
   '/admin/jobs': typeof AdminJobsIndexRoute
   '/jobs/$id': typeof JobsIdIndexRoute
   '/admin/jobs/$id/edit': typeof AdminJobsIdEditRoute
@@ -355,6 +362,7 @@ export interface FileRoutesById {
   '/admin/jobs/new': typeof AdminJobsNewRoute
   '/applications/success/$applicationId': typeof ApplicationsSuccessApplicationIdRoute
   '/jobs/$id/apply': typeof JobsIdApplyRoute
+  '/admin/applications/': typeof AdminApplicationsIndexRoute
   '/admin/jobs/': typeof AdminJobsIndexRoute
   '/jobs/$id/': typeof JobsIdIndexRoute
   '/admin/jobs/$id/edit': typeof AdminJobsIdEditRoute
@@ -397,6 +405,7 @@ export interface FileRouteTypes {
     | '/admin/jobs/new'
     | '/applications/success/$applicationId'
     | '/jobs/$id/apply'
+    | '/admin/applications/'
     | '/admin/jobs/'
     | '/jobs/$id/'
     | '/admin/jobs/$id/edit'
@@ -415,7 +424,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/saved-jobs'
     | '/settings'
-    | '/admin/applications'
     | '/admin/categories'
     | '/admin/companies'
     | '/admin/dashboard'
@@ -435,6 +443,7 @@ export interface FileRouteTypes {
     | '/admin/jobs/new'
     | '/applications/success/$applicationId'
     | '/jobs/$id/apply'
+    | '/admin/applications'
     | '/admin/jobs'
     | '/jobs/$id'
     | '/admin/jobs/$id/edit'
@@ -475,6 +484,7 @@ export interface FileRouteTypes {
     | '/admin/jobs/new'
     | '/applications/success/$applicationId'
     | '/jobs/$id/apply'
+    | '/admin/applications/'
     | '/admin/jobs/'
     | '/jobs/$id/'
     | '/admin/jobs/$id/edit'
@@ -747,6 +757,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminJobsIndexRouteImport
       parentRoute: typeof AdminJobsRoute
     }
+    '/admin/applications/': {
+      id: '/admin/applications/'
+      path: '/'
+      fullPath: '/admin/applications/'
+      preLoaderRoute: typeof AdminApplicationsIndexRouteImport
+      parentRoute: typeof AdminApplicationsRoute
+    }
     '/jobs/$id/apply': {
       id: '/jobs/$id/apply'
       path: '/apply'
@@ -799,10 +816,12 @@ const MyApplicationsRouteWithChildren = MyApplicationsRoute._addFileChildren(
 
 interface AdminApplicationsRouteChildren {
   AdminApplicationsIdRoute: typeof AdminApplicationsIdRoute
+  AdminApplicationsIndexRoute: typeof AdminApplicationsIndexRoute
 }
 
 const AdminApplicationsRouteChildren: AdminApplicationsRouteChildren = {
   AdminApplicationsIdRoute: AdminApplicationsIdRoute,
+  AdminApplicationsIndexRoute: AdminApplicationsIndexRoute,
 }
 
 const AdminApplicationsRouteWithChildren =
