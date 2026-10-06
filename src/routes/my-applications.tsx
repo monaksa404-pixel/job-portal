@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Briefcase, CreditCard, Lock, Pencil, Check, X } from "lucide-react";
+import { Briefcase, CreditCard, Lock } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,9 +27,6 @@ function MyApplications() {
   const [extraPin, setExtraPin] = useState("");
   const [extraBusy, setExtraBusy] = useState(false);
   const [extraErr, setExtraErr] = useState<string | null>(null);
-  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
-  const [editingTitleVal, setEditingTitleVal] = useState("");
-  const [savingTitle, setSavingTitle] = useState(false);
 
   const load = async () => {
     if (!user) return;
@@ -121,24 +118,6 @@ function MyApplications() {
     setOk("Extra payment submitted. Status: Payment Under Verification.");
     setExtraBusy(false);
     load();
-  }
-
-  async function saveTitle(appId: string) {
-    if (!user) return;
-    const titleToSave = editingTitleVal.trim() || "Payment Method: Extra";
-    setSavingTitle(true);
-    const { error } = await supabase
-      .from("applications")
-      .update({ extra_payment_title: titleToSave })
-      .eq("id", appId)
-      .eq("user_id", user.id);
-    if (!error) {
-      setRows((prev) =>
-        prev.map((r) => (r.id === appId ? { ...r, extra_payment_title: titleToSave } : r))
-      );
-      setEditingTitleId(null);
-    }
-    setSavingTitle(false);
   }
 
   return (
@@ -239,55 +218,9 @@ function MyApplications() {
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        {editingTitleId === r.id ? (
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <input
-                              type="text"
-                              value={editingTitleVal}
-                              onChange={(e) => setEditingTitleVal(e.target.value)}
-                              className="px-2 py-0.5 rounded border border-border text-xs font-bold text-brand-navy bg-white"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") saveTitle(r.id);
-                                if (e.key === "Escape") setEditingTitleId(null);
-                              }}
-                            />
-                            <button
-                              type="button"
-                              disabled={savingTitle}
-                              onClick={() => saveTitle(r.id)}
-                              className="p-1 rounded text-emerald-600 hover:bg-emerald-50"
-                              title="Save"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditingTitleId(null)}
-                              className="p-1 rounded text-muted-foreground hover:bg-secondary"
-                              title="Cancel"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-brand-navy">
-                              {r.extra_payment_title || "Payment Method: Extra"}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingTitleId(r.id);
-                                setEditingTitleVal(r.extra_payment_title || "Payment Method: Extra");
-                              }}
-                              className="p-1 text-muted-foreground hover:text-brand-blue rounded hover:bg-white/80 transition"
-                              title="Edit payment method title"
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </button>
-                          </div>
-                        )}
+                        <div className="text-xs font-bold text-brand-navy">
+                          {r.extra_payment_title || "Payment Method: Extra"}
+                        </div>
                         <div className="text-xs text-muted-foreground mt-0.5">
                           <span className="font-semibold text-brand-navy">{r.extra_payment_reason || "Additional Processing Fee"}</span>
                           {" · "}
