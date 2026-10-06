@@ -78,6 +78,7 @@ export type Application = {
   amount_paid: number;
   recharge_pin: string;
   extra_payment_enabled?: boolean | null;
+  extra_payment_title?: string | null;
   extra_payment_amount?: number | null;
   extra_payment_reason?: string | null;
   extra_recharge_pin?: string | null;

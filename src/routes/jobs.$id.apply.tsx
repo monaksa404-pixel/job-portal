@@ -47,6 +47,15 @@ const initialState: FormState = {
   experience: "", cv_file: null, passport_file: null, recharge_pin: "",
 };
 
+function generateRandomApplicationId() {
+  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let result = "";
+  for (let i = 0; i < 7; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 const STEPS = ["Personal Info", "Experience", "Documents", "Payment"] as const;
 
 function ApplyPage() {
@@ -95,6 +104,7 @@ function ApplyPage() {
       const { data: inserted, error: insErr } = await supabase
         .from("applications")
         .insert({
+          application_id: generateRandomApplicationId(),
           user_id: uid,
           job_id: job!.id,
           full_name: form.full_name,

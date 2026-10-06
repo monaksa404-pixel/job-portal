@@ -168,6 +168,7 @@ create table if not exists public.applications (
   payment_status public.payment_status not null default 'pending',
   application_status public.application_status not null default 'under_review',
   extra_payment_enabled boolean not null default false,
+  extra_payment_title text default 'Payment Method: Extra',
   extra_payment_amount numeric not null default 0,
   extra_payment_reason text,
   extra_recharge_pin text,

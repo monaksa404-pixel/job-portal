@@ -20,6 +20,7 @@ type Full = {
   iqama_status: string | null; iqama_profession: string | null; iqama_number: string | null; iqama_expiry: string | null;
   amount_paid: number;
   extra_payment_enabled?: boolean | null;
+  extra_payment_title?: string | null;
   extra_payment_amount?: number | null;
   extra_payment_reason?: string | null;
   extra_recharge_pin?: string | null;
@@ -40,6 +41,7 @@ function AppDetail() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [sendingMsg, setSendingMsg] = useState(false);
   const [extraEnabled, setExtraEnabled] = useState(false);
+  const [extraTitle, setExtraTitle] = useState("Payment Method: Extra");
   const [extraAmount, setExtraAmount] = useState("115");
   const [extraReason, setExtraReason] = useState("Additional Processing Fee – 115 SAR");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -56,6 +58,7 @@ function AppDetail() {
     setA(row);
     if (row) {
       setExtraEnabled(Boolean(row.extra_payment_enabled));
+      setExtraTitle(row.extra_payment_title || "Payment Method: Extra");
       setExtraAmount(row.extra_payment_amount != null ? String(row.extra_payment_amount) : "115");
       setExtraReason(row.extra_payment_reason || "Additional Processing Fee – 115 SAR");
     }
@@ -109,6 +112,7 @@ function AppDetail() {
     const amt = parseFloat(extraAmount) || 0;
     const updates: Record<string, unknown> = {
       extra_payment_enabled: extraEnabled,
+      extra_payment_title: extraTitle.trim() || "Payment Method: Extra",
       extra_payment_amount: amt,
       extra_payment_reason: extraReason.trim(),
     };
@@ -312,7 +316,17 @@ function AppDetail() {
                 Enable Extra Payment for this application
               </label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Method Title</label>
+                  <input
+                    type="text"
+                    value={extraTitle}
+                    onChange={(e) => setExtraTitle(e.target.value)}
+                    placeholder="Payment Method: Extra"
+                    className="w-full px-3 py-2 rounded-lg border border-border text-sm"
+                  />
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground mb-1">Payment Amount (SAR)</label>
                   <input
@@ -351,6 +365,7 @@ function AppDetail() {
               <div className="mt-4 pt-4 border-t border-border">
                 <div className="text-xs font-bold text-brand-navy mb-2">Extra Payment Flow</div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                  <Info label="Title" v={a.extra_payment_title || "Payment Method: Extra"} />
                   <Info label="Amount" v={`${a.extra_payment_amount ?? 0} SAR`} />
                   <Info label="Reason" v={a.extra_payment_reason || "—"} />
                   <Info

@@ -1,5 +1,5 @@
 export const ADMIN_APPLICATION_LIST_SELECT =
-  "id, application_id, created_at, payment_status, application_status, user_id, recharge_pin, full_name, email, phone, amount_paid, extra_payment_enabled, extra_payment_amount, extra_payment_reason, extra_recharge_pin, extra_payment_status, job:jobs(title, location, company_name, company:companies(name, logo_url))";
+  "id, application_id, created_at, payment_status, application_status, user_id, recharge_pin, full_name, email, phone, amount_paid, extra_payment_enabled, extra_payment_title, extra_payment_amount, extra_payment_reason, extra_recharge_pin, extra_payment_status, job:jobs(title, location, company_name, company:companies(name, logo_url))";
 
 export const ADMIN_APPLICATION_DETAIL_SELECT =
   "*, job:jobs(title, location, application_fee, company_name, company:companies(name, logo_url))";
